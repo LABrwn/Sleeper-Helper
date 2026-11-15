@@ -487,10 +487,15 @@ html:not([data-device="mobile"]) .sp-match .av.xl{width:50px;height:50px;font-si
 html:not([data-device="mobile"]) .sp-match .ck-tn{font-size:1.05rem}
 html:not([data-device="mobile"]) .sp-match .ck-score{font-size:clamp(1.9rem,2.6vw,2.5rem)}
 .sp-match .ck-ez{display:none}
-.sp-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
-.sp-strip>div{padding-top:8px;padding-bottom:8px}
-[data-device="mobile"] .sp-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
-[data-device="mobile"] .sp-strip>div{padding:8px 10px}
+.sp-strip{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-top:1px solid var(--line);padding:8px 20px}
+.sp-strip>div{display:grid;gap:1px}
+.sp-strip .c{text-align:center;padding:0 24px}
+.sp-strip .r{text-align:right}
+.sp-strip .l{font-size:.64rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.sp-strip .v{font-family:var(--f-display);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sp-strip .c .v{font-size:1.2rem}
+[data-device="mobile"] .sp-strip{padding:8px 12px}
+[data-device="mobile"] .sp-strip .c{padding:0 8px}
 [data-device="mobile"] .sp-strip .l{font-size:.56rem;letter-spacing:.04em}
 [data-device="mobile"] .sp-strip .v{font-size:.92rem;white-space:nowrap}
 [data-device="mobile"] .sp-match .ck-stage{height:230px}
@@ -878,7 +883,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15e</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15f</span></footer>
 
 <script>
 "use strict";
@@ -2262,29 +2267,35 @@ function dhAvail(x, n, now){
   const b = p(now); return b > .01 ? Math.min(1, p(n) / b) : p(n);
 }
 /* Bedarf: wie dringend braucht ein Kader noch diese Position? */
-/* Bedarf: Feste Startplätze zuerst, FLEX-Plätze teilen sich alle berechtigten Positionen, danach Bank mit abnehmendem Wert */
+/* Wie viel bringt ein Spieler meinem Kader? Maßstab ist die Startelf: Um wie viele Saisonpunkte über Ersatzniveau
+   wird meine beste Aufstellung besser, wenn er dazukommt? Wer nicht starten würde, zählt nur mit einem kleinen
+   Bankwert, der mit jedem weiteren Bankspieler der Position sinkt. Kicker und Defense erst in den letzten 3 Runden. */
 const dhDed = pos => S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === pos; }).length;
-function dhNeedF(pos, have, round, I, left){
-  const h = p => have[p] || 0, ded = dhDed(pos), mine = h(pos);
-  /* Spät wird es, wenn kaum noch Picks übrig sind, um alle festen Startplätze zu füllen */
-  const missing = S.leaguePos.reduce((a, p) => a + Math.max(0, dhDed(p) - h(p)), 0);
-  const late = left != null ? left <= missing + 1 : round > I.R - 2;
-  if (['K','DEF'].includes(pos)) return mine >= ded ? .05 : (left != null ? left <= 2 + Math.max(0, missing - (dhDed('K') - h('K') > 0) - (dhDed('DEF') - h('DEF') > 0)) : late) ? 6 : .05;
-  if (mine < ded) return late ? 2 : 1.15;
-  /* FLEX: offene Plätze, in die diese Position passt, nach Abzug der Überzähligen aller Positionen */
-  const flexes = S.slots.filter(s => elig(s).length > 1 && elig(s).map(normPos).includes(pos));
-  let open = flexes.length;
-  if (open){
-    const fe = new Set(flexes.flatMap(s => elig(s).map(normPos)));
-    const extra = [...fe].reduce((a, p) => a + Math.max(0, h(p) - dhDed(p)), 0);
-    open -= extra;
-  }
-  if (pos === 'QB' && !dhSuperflex()) return mine >= 2 ? .1 : .35;
-  if (open > 0) return 1;
-  const bench = mine - ded - Math.max(0, flexes.length ? 1 : 0);
-  return bench <= 0 ? .55 : bench === 1 ? .4 : .2;
+function dhRank(avail, mine, left, mk){
+  const C = dhCalc(), sf = dhSuperflex();
+  const v0 = pid => Math.max(0, (C.by[pid] || {}).vor || 0), posOf = pid => (C.by[pid] || {}).pos || normPos(pos1(pid));
+  const mineC = mine.map(pid => ({pid, pts:v0(pid)}));
+  const base = optimalLineup(mineC);
+  const have = {}, bench = {};
+  mine.forEach(pid => { const p = posOf(pid); have[p] = (have[p] || 0) + 1; if (!base.set.has(pid)) bench[p] = (bench[p] || 0) + 1; });
+  const kd = ['K','DEF'].filter(p => S.leaguePos.includes(p));
+  const missKD = kd.reduce((a, p) => a + Math.max(0, dhDed(p) - (have[p] || 0)), 0);
+  return avail.map(x => {
+    if (mk[x.pid] === -1) return null;
+    if (kd.includes(x.pos)){
+      if (left > 3 || (have[x.pos] || 0) >= dhDed(x.pos)) return null;
+      return {x, s:(left <= missKD ? 1e6 : 0) + Math.max(0, x.vor) + 1, gain:Math.max(0, x.vor), start:true};
+    }
+    if (left <= missKD) return null;   // die letzten Picks gehören Kicker und Defense
+    const gain = optimalLineup([...mineC, {pid:x.pid, pts:Math.max(0, x.vor)}]).total - base.total;
+    let bf = [.35, .25, .15, .08][Math.min(bench[x.pos] || 0, 3)];
+    if (x.pos === 'QB' && !sf) bf = (have.QB || 0) >= 2 ? 0 : .12;
+    if (x.pos === 'TE') bf = (have.TE || 0) >= 2 ? 0 : .12;
+    let sc = gain + bf * Math.max(0, x.vor) + x.vor * .001;
+    if (mk[x.pid] === 1) sc = sc * 1.1 + 1;
+    return {x, s:sc, gain, start:gain > .5};
+  }).filter(Boolean).sort((a,b) => b.s - a.s);
 }
-const dhScore = (x, f, mark) => { let s = f >= 2 ? Math.max(x.vor, 0) * f + 50 * f : x.vor >= 0 ? x.vor * f : x.vor / Math.max(f, .05); if (mark === 1) s += Math.abs(s) * .1 + 1; if (mark === -1) s -= Math.abs(s) * .5 + 5; return s; };
 const dhPosLbl = x => `${x.pos}${x.prk}`;
 const dhOpenWin = () => `<button class="btnlike ghost dh-win" data-dhwin>Live-Draft im eigenen Fenster</button>`;
 
@@ -2352,19 +2363,20 @@ VIEWS.dplan = () => {
   S.after.push(() => { const el = document.getElementById('dhSlot'); if (el) el.addEventListener('change', e => { S.dh.slot = +e.target.value; renderView(); }); });
   if (I.type === 'auction') return head('Draft-Plan') + `<div class="note">Bei einer Auktion gibt es keine feste Pickfolge. Nutze das Draft-Board mit den Auktionswerten und im Draft den Live-Modus.</div>`;
   /* Plan: an jedem eigenen Pick der beste Spieler, der dort mit mindestens 50 % noch da ist, gewichtet nach Bedarf */
-  const picks = dhPickNos(slot, I), taken = new Set(), have = {}, plan = [];
+  const picks = dhPickNos(slot, I), taken = [], plan = [];
   for (const [ix, pk] of picks.entries()){
-    const cands = C.list.filter(x => !taken.has(x.pid) && mk[x.pid] !== -1 && (x.adp == null ? x.vrk >= pk.no : dhAvail(x, pk.no) >= .5))
-      .map(x => ({x, s:dhScore(x, dhNeedF(x.pos, have, pk.r, I, picks.length - ix), mk[x.pid]), p:x.adp ? dhAvail(x, pk.no) : null})).sort((a,b) => b.s - a.s);
+    const pool = C.list.filter(x => !taken.includes(x.pid) && (x.adp == null ? x.vrk >= pk.no || ['K','DEF'].includes(x.pos) : dhAvail(x, pk.no) >= .5));
+    const cands = dhRank(pool, taken, picks.length - ix, mk).map(c => ({...c, p:c.x.adp ? dhAvail(c.x, pk.no) : null}));
     const best = cands[0]; if (!best) continue;
-    taken.add(best.x.pid); have[best.x.pos] = (have[best.x.pos] || 0) + 1;
+    taken.push(best.x.pid);
     plan.push({pk, best, alt:cands.slice(1, 4)});
   }
+  const evalHtml = dhPlanCheck(plan.map(p => p.best.x.pid), slot, mine);
   const startPts = (() => { const sel = plan.map(p => ({pid:p.best.x.pid, pts:p.best.x.pts})); return optimalLineup(sel).total; })();
   const shape = plan.slice(0, 6).map(p => p.best.x.pos).join(' · ');
   const pch = (x, p) => `<span class="dh-c">${posChip(x.pos)} <span class="tlink" data-player="${esc(x.pid)}">${esc(pname(x.pid))}</span>${p != null ? ` <span class="muted small">${f0(p * 100)} %</span>` : ''}</span>`;
   return `
-  ${head('Draft-Plan', `${dhType()} · ${dhTypeLbl(I.type)} · Draftplatz ${slot} von ${I.T}${mine && mine === slot ? ' (deiner)' : ''}`, undefined, `Für jeden deiner Picks: Welche Spieler sind dort laut ADP (durchschnittlicher Draftplatz bei Sleeper) mit mindestens 50 % Wahrscheinlichkeit noch verfügbar? Daraus wählt der Plan den mit dem höchsten Draft-Wert, gewichtet nach dem, was deinem Kader noch fehlt. Kicker und Defense erst in den letzten Runden. Spieler, die du auf „Meiden“ gesetzt hast, fallen raus, „Ziel“-Spieler werden leicht bevorzugt. Der Plan ist eine Orientierung, kein Muss: Der Draft läuft nie genau nach ADP.`)}
+  ${head('Draft-Plan', `${dhType()} · ${dhTypeLbl(I.type)} · Draftplatz ${slot} von ${I.T}${mine && mine === slot ? ' (deiner)' : ''}`, undefined, `Für jeden deiner Picks: Welche Spieler sind dort laut ADP (durchschnittlicher Draftplatz bei Sleeper) mit mindestens 50 % Wahrscheinlichkeit noch verfügbar? Daraus wählt der Plan den, der deine beste Startelf am meisten verbessert, gemessen in Saisonpunkten über Ersatzniveau. Ist die Startelf voll, zählt ein Spieler nur noch mit einem kleinen Bankwert, der mit jedem weiteren Bankspieler der Position sinkt. Kicker und Defense erst in den letzten drei Runden, und nur so viele, wie Startplätze da sind. Spieler, die du auf „Meiden“ gesetzt hast, fallen raus, „Ziel“-Spieler werden leicht bevorzugt. Der Plan ist eine Orientierung, kein Muss: Der Draft läuft nie genau nach ADP.`)}
   <div class="filters"><span class="muted small">Draftplatz</span><select class="sel" id="dhSlot" aria-label="Draftplatz">${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<option value="${s}" ${s === slot ? 'selected' : ''}>Platz ${s}${s === mine ? ' (deiner)' : ''}</option>`).join('')}</select>${mine ? '' : '<span class="small muted">Die Draft-Reihenfolge steht in Sleeper noch nicht fest, wähle deinen Platz.</span>'}</div>
   <div class="kpis">
     ${kpi(shape, 'Die ersten sechs Runden', 'Positionen laut Plan')}
@@ -2373,9 +2385,47 @@ VIEWS.dplan = () => {
   </div>
   <section class="panel"><div class="panel-head"><h3>Runde für Runde</h3>${dhOpenWin()}</div>
     <div class="tbl-wrap"><table data-nosort><thead><tr><th>Runde</th><th class="n">Pick</th><th>Plan</th><th class="n">Draft-Wert</th><th>Alternativen (Chance, dass er noch da ist)</th></tr></thead><tbody>
-    ${plan.map(p => `<tr><td>${p.pk.r}</td><td class="n">${p.pk.no}</td><td>${pch(p.best.x, p.best.p)}${dhChips(p.best.x)}<div class="pmeta">${dhPosLbl(p.best.x)}${p.best.x.tier ? ' · Stufe ' + p.best.x.tier : ''}</div></td><td class="n">${sgn(p.best.x.vor)}</td><td class="small">${p.alt.map(a => pch(a.x, a.p)).join('')}</td></tr>`).join('')}
-    </tbody></table></div></section>`;
+    ${plan.map(p => `<tr><td>${p.pk.r}</td><td class="n">${p.pk.no}</td><td>${pch(p.best.x, p.best.p)}${dhChips(p.best.x)}<div class="pmeta">${dhPosLbl(p.best.x)}${p.best.x.tier ? ' · Stufe ' + p.best.x.tier : ''}</div></td><td class="n">${sgn(p.best.x.vor)}<div class="pmeta">${p.best.start ? 'Startelf' : 'Bank'}</div></td><td class="small">${p.alt.map(a => pch(a.x, a.p)).join('')}</td></tr>`).join('')}
+    </tbody></table></div></section>
+  ${evalHtml}`;
 };
+/* Wie wäre der Plan in der laufenden Saison gelaufen? Kader = Plan, Woche für Woche die echten Punkte der Spieler.
+   Aufstellung: die optimale der Woche, mal deiner bisherigen Coaching-Quote. Gegner und ihre Punkte wie tatsächlich. */
+function dhPlanCheck(pids, slot, mine){
+  const C = S.C, me = S.myRid, T = C && C.team[me];
+  if (!C || !C.weeks.length || !T) return '';
+  if (String(S.league.season) !== String(S.dh.projSeason || S.league.season)) return '';
+  const eff = T.eff && isFinite(T.eff) ? T.eff : .85;
+  const rows = C.weeks.map(w => {
+    const c = pids.map(pid => { const v = weekPts(pid, w); return {pid, pts:v != null && didPlay(w, pid, v) ? v : 0}; });
+    const opt = optimalLineup(c).total, plan = opt * eff, act = C.scores[w][me], o = C.opp[w][me], op = o != null ? C.scores[w][o] : null;
+    return {w, opt, plan, act, op, o};
+  });
+  /* Tabelle neu rechnen: eigene Punkte durch den Plan ersetzt, Gegner behalten ihre echten Punkte */
+  const rids = S.teams.map(t => t.rid);
+  const table = useMe => { const acc = {}; rids.forEach(r => acc[r] = {w:0, l:0, t:0, pf:0});
+    for (const [i, w] of C.weeks.entries()){ const sc = {...C.scores[w]}; if (useMe) sc[me] = rows[i].plan;
+      for (const r of rids){ const a = sc[r]; if (a == null) continue; const o = C.opp[w][r], b = o != null ? sc[o] : null; acc[r].pf += a; if (b == null) continue; if (a > b) acc[r].w++; else if (a < b) acc[r].l++; else acc[r].t++; } }
+    const order = [...rids].sort((a,b) => (acc[b].w + acc[b].t / 2) - (acc[a].w + acc[a].t / 2) || acc[b].pf - acc[a].pf);
+    return {acc, place:order.indexOf(me) + 1}; };
+  const real = table(false), alt = table(true), ra = real.acc[me], pa = alt.acc[me];
+  const rec = a => `${a.w}–${a.l}${a.t ? '–' + a.t : ''}`;
+  const sumP = sum(rows.map(r => r.plan)), sumA = sum(rows.map(r => r.act || 0)), sumO = sum(rows.map(r => r.opt));
+  const lg = avg(S.teams.map(t => C.team[t.rid].avg));
+  const used = pids.filter(pid => S.teamByRid[me].roster.players && S.teamByRid[me].roster.players.includes(pid)).length;
+  return `<section class="panel"><div class="panel-head"><h3>So wäre der Plan in dieser Saison gelaufen</h3>${qm(`Kader = die ${pids.length} Spieler aus dem Plan, ohne Waiver und Trades. Für jede bisherige Woche zählen ihre echten Punkte in eurem Scoring. Aufgestellt wird die beste Startelf der Woche, multipliziert mit deiner bisherigen Coaching-Quote (${pct(eff)}), weil niemand jede Woche perfekt aufstellt. Die Gegner behalten ihre tatsächlichen Punkte, daraus ergeben sich Bilanz und Tabellenplatz. Vorsicht: Die Sleeper-Projektionen, auf denen der Plan beruht, kennen den bisherigen Saisonverlauf schon. Der Plan ist also etwas klüger, als er vor dem Draft hätte sein können.`)}</div>
+    <div class="kpis">
+      ${kpi(rec(pa), 'Bilanz mit dem Plan', `tatsächlich ${rec(ra)}`, pa.w > ra.w ? 'good' : pa.w < ra.w ? 'bad' : '')}
+      ${kpi(`Platz ${alt.place}`, 'Tabelle mit dem Plan', `tatsächlich Platz ${real.place}`, alt.place < real.place ? 'good' : alt.place > real.place ? 'bad' : '')}
+      ${kpi(f1(sumP / rows.length), 'Punkte pro Woche', `tatsächlich ${f1(sumA / rows.length)} · Liga ${f1(lg)}`, sumP > sumA ? 'good' : 'bad')}
+      ${kpi(sgn(sumP - sumA), 'Punkte insgesamt', `${f0(sumP)} statt ${f0(sumA)} · optimal aufgestellt ${f0(sumO)}`)}
+    </div>
+    <div class="tbl-wrap"><table data-nosort><thead><tr><th>Woche</th><th class="n">Plan</th><th class="n">Tatsächlich</th><th class="n">Gegner</th><th>Mit dem Plan</th><th>Tatsächlich</th></tr></thead><tbody>
+    ${rows.map(r => { const res = (a, b) => b == null ? '–' : a > b ? '<span class="chip good">Sieg</span>' : a < b ? '<span class="chip bad">Niederlage</span>' : '<span class="chip plain">Remis</span>';
+      return `<tr><td>W${r.w}</td><td class="n" style="font-weight:700">${f1(r.plan)}</td><td class="n">${f1(r.act)}</td><td class="n">${f1(r.op)}${r.o != null ? `<div class="pmeta">${esc(S.teamByRid[r.o].name)}</div>` : ''}</td><td>${res(r.plan, r.op)}</td><td>${res(r.act, r.op)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="small muted">${used} der ${pids.length} Plan-Spieler stehen heute auch in deinem Kader.${S.statsOK ? '' : ' Ohne Wochen-Stats von Sleeper fehlen Punkte für Spieler, die bei niemandem im Kader stehen.'}</p></section>`;
+}
 
 /* ---------- Ansicht Live-Draft: verbindet sich mit dem Sleeper-Draft, für ein zweites Fenster neben Sleeper ---------- */
 function dhDraftId(){ try { return S.dh.over || localStorage.getItem('sh-draft-' + S.league.league_id) || S.league.draft_id; } catch(e){ return S.league.draft_id; } }
@@ -2427,14 +2477,14 @@ VIEWS.dlive = () => {
   const have = {}; minePicks.forEach(p => { const pos = normPos((p.metadata && p.metadata.position) || pos1(p.player_id)); have[pos] = (have[pos] || 0) + 1; });
   const round = auc ? 1 : rOf(Math.min(cur, I.T * I.R));
   const avail = C.list.filter(x => !taken.has(x.pid));
-  const scored = avail.map(x => ({x, s:dhScore(x, dhNeedF(x.pos, have, myNext[0] ? myNext[0].r : round, I, myNext.length || null), mk[x.pid])})).sort((a,b) => b.s - a.s);
+  const scored = dhRank(avail, minePicks.map(p => p.player_id), myNext.length || (I.R - minePicks.length), mk);
   const topV = avail[0];
   const why = x => {
     const r = [];
     if (topV && x.pid === topV.pid) r.push('höchster Draft-Wert');
     if (x.tier){ const same = avail.filter(y => y.pos === x.pos && y.tier === x.tier).length; if (same === 1) r.push(`letzter aus Stufe ${x.tier} (${x.pos})`); else if (same === 2) r.push(`nur noch 2 aus Stufe ${x.tier}`); }
-    const ded = S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === x.pos; }).length;
-    if ((have[x.pos] || 0) < ded) r.push(`${x.pos} fehlt dir noch`);
+    const g = (scored.find(c => c.x.pid === x.pid) || {}).gain;
+    if (g > .5) r.push(`Startelf +${f0(g)} Saisonpunkte`); else r.push('Bankspieler');
     if (!auc && x.adp && x.adp < cur - 3) r.push(`überfällig, ADP ${f0(x.adp)}`);
     if (mk[x.pid] === 1) r.push('dein Ziel');
     return r;
@@ -2476,7 +2526,7 @@ VIEWS.dlive = () => {
   ${status}
   <div class="dl-grid">
     <div class="dl-main">
-      <section class="panel"><div class="panel-head"><h3>${onClock ? 'Jetzt wählen' : 'Für deinen nächsten Pick'}</h3>${qm('Reihenfolge: Draft-Wert (Sleeper-Projektion minus Ersatzniveau), gewichtet nach dem, was deinem Kader noch fehlt. Kicker und Defense erst in den letzten zwei Runden. Deine Markierungen aus dem Draft-Board zählen mit. Die Prozente schätzen aus dem ADP, ob der Spieler an deinem Pick noch verfügbar ist. Unter 30 % heißt: Willst du ihn, musst du jetzt zugreifen.')}</div>
+      <section class="panel"><div class="panel-head"><h3>${onClock ? 'Jetzt wählen' : 'Für deinen nächsten Pick'}</h3>${qm('Reihenfolge: Um wie viele Saisonpunkte über Ersatzniveau wird deine beste Startelf besser? Ist sie voll, zählt nur noch ein kleiner Bankwert. Kicker und Defense erst in den letzten drei Runden. Deine Markierungen aus dem Draft-Board zählen mit. Die Prozente schätzen aus dem ADP, ob der Spieler an deinem Pick noch verfügbar ist. Unter 30 % heißt: Willst du ihn, musst du jetzt zugreifen.')}</div>
         ${recHtml || '<p class="muted">Keine Spieler mehr verfügbar.</p>'}</section>
       <section class="panel"><div class="panel-head"><h3>Beste freie Spieler</h3></div>
         <div class="filters">${['ALL', ...S.leaguePos].map(p => `<button class="seg" data-lpos="${p}" aria-pressed="${lpos === p}">${p === 'ALL' ? 'Alle' : p}</button>`).join('')}</div>
@@ -3046,11 +3096,12 @@ function matchPair(w, rid){
 function matchStage(P, o = {}){
   const A = S.teamByRid[P.a], B = S.teamByRid[P.b], TA = S.C.team[P.a], TB = S.C.team[P.b];
   const rec = X => X ? `${X.w}–${X.l}${X.t ? '–' + X.t : ''}` : '';
+  const rk = X => X ? `${esc(rec(X))} · Platz ${X.place} · <span title="Power-Ranking">Power #${X.prRank}</span>` : '';
   const win = P.win, bx = 8.3 + 83.4 * Math.max(.02, Math.min(.98, win));
-  const sa = P.pa, sb = P.pb;
+  const sa = o.scored && !P.done ? P.la : P.pa, sb = o.scored && !P.done ? P.lb : P.pb;
   const lbl = P.done ? (win === 1 ? 'Sieg' : win === 0 ? 'Niederlage' : 'Remis') : `${f0(win * 100)} %`;
   const eb = o.eyebrow || `Woche ${P.w} · ${P.done ? 'Endstand' : P.live ? 'Spiel läuft' : 'nächstes Spiel'}`;
-  const sub = P.done ? 'Endstand' : `erwartet · bisher erzielt <b>${f1(P.la)} : ${f1(P.lb)}</b>${P.live ? ' · läuft' : ''}`;
+  const sub = P.done ? 'Endstand' : o.scored ? (P.live ? 'erzielt · läuft' : 'erzielt · noch nicht begonnen') : `erwartet · bisher erzielt <b>${f1(P.la)} : ${f1(P.lb)}</b>${P.live ? ' · läuft' : ''}`;
   return `<div class="ck-stage ${o.compact ? 'compact' : ''}">${fieldStage()}
     <span class="ck-ez l">${esc(ezName(A.name))}</span><span class="ck-ez r">${esc(ezName(B.name))}</span>
     <span class="ck-trail ${win >= .5 ? 'good' : 'bad'}" style="left:${Math.min(50, bx)}%;width:${Math.abs(bx - 50)}%"></span>
@@ -3058,9 +3109,9 @@ function matchStage(P, o = {}){
     <span class="ck-ball" style="left:${bx}%" title="${P.done ? lbl : 'Siegchance ' + lbl}"><i></i><b class="${win >= .5 ? 'good' : 'bad'}">${lbl}</b></span>
     <div class="ck-eyebrow ck-top">${esc(eb)}</div>
     <div class="ck-vs">
-      <div class="ck-side">${avatar(A.avatar, A.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.a}">${esc(A.name)}</span></div><div class="ck-sub">${esc(rec(TA))}${o.place ? ' · Platz ' + o.place : ''}</div></div>
+      <div class="ck-side">${avatar(A.avatar, A.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.a}">${esc(A.name)}</span></div><div class="ck-sub">${o.ranks ? rk(TA) : esc(rec(TA)) + (o.place ? ' · Platz ' + o.place : '')}</div></div>
       <div class="ck-mid"><div class="ck-score"><span class="${sa >= sb ? 'lead' : ''}">${f1(sa)}</span><em>:</em><span class="${sb > sa ? 'lead' : ''}">${f1(sb)}</span></div><div class="ck-sub ck-got">${sub}</div></div>
-      <div class="ck-side r">${avatar(B.avatar, B.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.b}">${esc(B.name)}</span></div><div class="ck-sub">${esc(rec(TB))} · ${esc(B.manager)}</div></div>
+      <div class="ck-side r">${avatar(B.avatar, B.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.b}">${esc(B.name)}</span></div><div class="ck-sub">${o.ranks ? rk(TB) : esc(rec(TB)) + ' · ' + esc(B.manager)}</div></div>
     </div></div>`;
 }
 /* Paarung als Fenster: Bühne und beide Aufstellungen Slot für Slot */
@@ -3092,18 +3143,17 @@ VIEWS.spieltag = () => {
   for (const rid of order){ const m = ms.find(x => x.roster_id === rid); if (!m || m.matchup_id == null || seen.has(m.matchup_id)) continue; seen.add(m.matchup_id); const P = matchPair(w, rid); if (P) pairs.push(P); }
   const strip = P => {
     const ta = C.team[P.a], tb = C.team[P.b];
-    const kicks = P.done ? [] : [P.a, P.b].flatMap(r => { const m = ms.find(x => x.roster_id === r); return (m && m.starters || []).filter(x => x && x !== '0').map(pid => kickoff(nflGame(nflTeam(pid), w))); }).filter(k => k && k.getTime() > Date.now()).sort((x, y) => x - y);
-    return `<div class="ck-strip sp-strip">
-      <div><span class="l">${P.done ? 'Abstand' : 'Erwarteter Abstand'}</span><span class="v">${sgn(P.pa - P.pb)}</span></div>
-      <div><span class="l">Ø Punkte</span><span class="v">${ta ? f1(ta.avg) : '–'} : ${tb ? f1(tb.avg) : '–'}</span></div>
-      <div><span class="l">${P.done ? 'Woche' : 'Nächster Anstoß'}</span><span class="v">${P.done ? 'beendet' : kicks.length ? esc(fmtKick(kicks[0])) : 'alle Spiele laufen'}</span></div>
+    return `<div class="sp-strip">
+      <div><span class="l">Ø Punkte</span><span class="v">${ta ? f1(ta.avg) : '–'}</span></div>
+      <div class="c"><span class="l">${P.done ? 'Endstand' : 'Erwartete Punkte'}</span><span class="v">${f1(P.pa)} : ${f1(P.pb)}</span></div>
+      <div class="r"><span class="l">Ø Punkte</span><span class="v">${tb ? f1(tb.avg) : '–'}</span></div>
     </div>`;
   };
   return `
   ${head('Spieltag', `Woche ${w} · ${pairs.length} Spiele${pairs.some(p => p.live) ? ' · läuft' : ''}`)}
   <div class="filters"><span class="muted small">Woche</span><select class="sel" id="spWeek" aria-label="Woche">${weeks.map(x => `<option value="${x}" ${x === w ? 'selected' : ''}>Woche ${x}</option>`).join('')}</select>${qm(`Alle Paarungen der Woche, dein Spiel oben. Der Ball steht bei der Siegchance des linken Teams: in der Mitte heißt 50 zu 50, je näher an einer Endzone, desto klarer der Favorit. Vor und während des Spieltags zählen Spieler, deren NFL-Spiel schon läuft, mit ihren Live-Punkten, der Rest mit Projektion, Form und Saisonschnitt. Für vergangene Wochen steht der Endstand da. Ein Klick auf ein Spiel zeigt beide Aufstellungen.`)}</div>
   <div class="sp-list">${pairs.map(P => { const mine = P.a === me || P.b === me; return `<section class="sp-match ${mine ? 'mine' : ''}" data-match="${P.w}:${P.a}" role="button" tabindex="0" aria-label="Paarung öffnen">
-    ${matchStage(P, {eyebrow: `${mine ? 'Dein Spiel' : 'Woche ' + P.w} · ${P.done ? 'Endstand' : P.live ? 'Spiel läuft' : 'noch nicht begonnen'}`})}${strip(P)}</section>`; }).join('')}</div>`;
+    ${matchStage(P, {scored:true, ranks:true, eyebrow: `${mine ? 'Dein Spiel' : 'Woche ' + P.w} · ${P.done ? 'Endstand' : P.live ? 'Spiel läuft' : 'noch nicht begonnen'}`})}${strip(P)}</section>`; }).join('')}</div>`;
 };
 VIEWS.cockpit = () => {
   const C = S.C, me = S.myRid, t = S.teamByRid[me], T = C.team[me], n = S.teams.length;
