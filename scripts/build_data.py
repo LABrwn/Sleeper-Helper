@@ -9,6 +9,7 @@ Adresse lädt.
     python3 scripts/build_data.py --out data            # lädt die aktuellen Dateien
     python3 scripts/build_data.py --out data --cache c  # nutzt bereits geladene Dateien in c/
 """
+import re
 import argparse, csv, datetime, gzip, io, json, math, os, sys, time, urllib.request
 from collections import defaultdict
 
@@ -85,6 +86,12 @@ def r1(x):
 
 def r3(x):
     return None if x is None else round(x, 3)
+
+
+def name_key(n):
+    """Name vereinheitlichen, wie es auch die App tut: klein, ohne Satzzeichen und Namenszusätze."""
+    n = re.sub(r"[^a-z ]", "", (n or "").lower().replace("-", " "))
+    return " ".join(w for w in n.split() if w not in ("jr", "sr", "ii", "iii", "iv", "v"))
 
 
 def build_history(Y, cache, out, meta_by_gsis, pfr2gsis):
@@ -431,6 +438,21 @@ def main():
                           't': {g: v for g, v in T.items() if g in out_players}, 'c': {g: v for g, v in C.items() if g in out_players}})
     dump('defense.json', {'teams': defense})
     dump('schedule.json', {'games': games, 'byes': byes, 'tz': 'America/New_York'})
+    # Zuordnung Sleeper -> NFL: Sleeper liefert die GSIS-ID nicht für alle Spieler,
+    # deshalb zusätzlich über die ESPN-ID und über Name plus Position
+    ids_espn, ids_name, seen = {}, {}, set()
+    for p in rows(players_p):
+        g, pos = p['gsis_id'], p['position']
+        if not g or pos not in POS or not (p['last_season'] or '').isdigit() or int(p['last_season']) < S - 3:
+            continue
+        if p['espn_id']:
+            ids_espn[p['espn_id'].split('.')[0]] = g
+        k = name_key(p['display_name']) + '|' + pos
+        if k in seen:
+            ids_name.pop(k, None)   # mehrdeutig: lieber keine Zuordnung
+        else:
+            seen.add(k); ids_name[k] = g
+    dump('ids.json', {'espn': ids_espn, 'name': ids_name})
     # Vorsaisons für die Draft-Planung (abgeschlossene Saisons werden nur einmal gebaut)
     hist = []
     for Y in range(S - 3, S):
@@ -441,7 +463,7 @@ def main():
             print(f'Vorsaison {Y} übersprungen: {e}', file=sys.stderr)
     dump('meta.json', {'season': S, 'lastWeek': last_week, 'generated': now, 'players': len(out_players), 'history': hist,
                        'source': 'nflverse (github.com/nflverse/nflverse-data), CC BY 4.0',
-                       'files': ['players.json', 'targets.json', 'defense.json', 'schedule.json']})
+                       'files': ['players.json', 'targets.json', 'defense.json', 'schedule.json', 'ids.json']})
 
 
 if __name__ == '__main__':

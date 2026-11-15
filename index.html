@@ -460,6 +460,15 @@ td.tx-st{background:rgba(61,123,255,.18);font-weight:600}
 .cock2{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
 @media (min-width:1150px){body:not([data-device="mobile"]) .cock2{grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);align-items:start}}
 .cock2 .panel .tc-p{font-size:.9rem}
+.sp-list{display:flex;flex-direction:column;gap:18px}
+.sp-match{border-radius:var(--r);overflow:hidden;background:var(--surface);border:1px solid var(--line);box-shadow:var(--lift);cursor:pointer;transition:border-color .15s,transform .15s}
+.sp-match:hover{border-color:#4A5A86}
+.sp-match:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sp-match.mine{border-color:var(--mine);box-shadow:0 0 0 1px var(--mine),var(--lift)}
+.sp-match .ck-stage{height:clamp(220px,19vw,290px)}
+[data-device="mobile"] .sp-match .ck-stage{height:250px}
+.sp-match .ck-ez{display:none}
+.sp-strip{border-top:1px solid var(--line);border-bottom:0}
 .ck-stage.compact{height:200px}
 .ck-stage.compact .ck-score{font-size:2rem}
 .ck-stage.compact .av.xl{width:46px;height:46px;font-size:1rem}
@@ -804,7 +813,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15b</span></footer>
 
 <script>
 "use strict";
@@ -1519,16 +1528,16 @@ async function loadDetails(){
 }
 
 async function loadPlayers(){
-  const c = await idb.get('players2');
+  const c = await idb.get('players3');
   if (c && Date.now() - c.t < 12*3600e3 && c.d) return c.d;
   const d = await api('/players/nfl') || {};
   const slim = {};
   for (const [id,p] of Object.entries(d)){
     if (!p) continue;
     const n = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-    slim[id] = {n, pos:p.position, fp:p.fantasy_positions, t:p.team, inj:p.injury_status, injp:p.injury_body_part, act:p.active, st:p.status, age:p.age, g:(p.gsis_id || '').trim() || undefined};
+    slim[id] = {n, pos:p.position, fp:p.fantasy_positions, t:p.team, inj:p.injury_status, injp:p.injury_body_part, act:p.active, st:p.status, age:p.age, g:(p.gsis_id || '').trim() || undefined, e:p.espn_id != null ? String(p.espn_id) : undefined};
   }
-  idb.set('players2', {t:Date.now(), d:slim});
+  idb.set('players3', {t:Date.now(), d:slim});
   return slim;
 }
 
@@ -1539,18 +1548,28 @@ async function nxGet(f){ const r = await fetch(DATA_BASE + f, {cache:'no-cache'}
 async function loadNx(season){
   const meta = await nxGet('meta.json');
   if (String(meta.season) !== String(season)) return null;
-  const [pl, de, sc] = await Promise.all(['players.json','defense.json','schedule.json'].map(nxGet));
+  const [pl, de, sc, ids] = await Promise.all([...['players.json','defense.json','schedule.json'].map(nxGet), nxGet('ids.json').catch(() => ({espn:{}, name:{}}))]);
   const sch = pl.schema, P = {};
   for (const [g, p] of Object.entries(pl.players)) P[g] = {...p, w: p.w.map(a => { const o = {}; sch.forEach((k,i) => { if (a[i] != null) o[k] = a[i]; }); return o; })};
   const games = sc.games.map(([w, away, home, day, time, as, hs]) => ({w, away, home, day, time, as, hs}));
-  return {meta, P, D: de.teams, games, byes: sc.byes};
+  return {meta, P, D: de.teams, games, byes: sc.byes, ids};
 }
 async function loadTargets(){
   if (S.nxT) return S.nxT;
   try { S.nxT = await nxGet('targets.json'); } catch(e){ S.nxT = {t:{}, c:{}}; }
   return S.nxT;
 }
-const gsisOf = pid => (S.players && S.players[pid] && S.players[pid].g) || null;
+/* Sleeper liefert die GSIS-ID nicht für jeden Spieler. Dann über die ESPN-ID oder Name plus Position zuordnen. */
+const nameKey = n => String(n || '').toLowerCase().replace(/-/g, ' ').replace(/[^a-z ]/g, '').split(/\s+/).filter(w => w && !['jr','sr','ii','iii','iv','v'].includes(w)).join(' ');
+const gsisCache = {};
+function gsisOf(pid){
+  const p = S.players && S.players[pid]; if (!p) return null;
+  if (p.g && (!S.nx || S.nx.P[p.g])) return p.g;
+  if (!S.nx || !S.nx.ids) return p.g || null;
+  if (pid in gsisCache) return gsisCache[pid];
+  const ids = S.nx.ids, pos = normPos(p.pos);
+  return gsisCache[pid] = (p.e && ids.espn[p.e]) || ids.name[nameKey(p.n) + '|' + pos] || p.g || null;
+}
 const nxP = pid => { const g = gsisOf(pid); return g && S.nx ? S.nx.P[g] || null : null; };
 function nflGame(tm, w){ return S.nx && tm ? S.nx.games.find(g => g.w === w && (g.home === tm || g.away === tm)) || null : null; }
 function oppOf(tm, w){ const g = nflGame(tm, w); return g ? (g.home === tm ? g.away : g.home) : null; }
@@ -2584,23 +2603,21 @@ VIEWS.spieltag = () => {
   const ms = S.matchups[w] || [];
   const order = [me, ...S.teams.map(t => t.rid).filter(r => r !== me)];
   for (const rid of order){ const m = ms.find(x => x.roster_id === rid); if (!m || m.matchup_id == null || seen.has(m.matchup_id)) continue; seen.add(m.matchup_id); const P = matchPair(w, rid); if (P) pairs.push(P); }
-  const side = (P, r, right) => {
-    const t = S.teamByRid[r], T = C.team[r], isA = r === P.a, wp = isA ? P.win : 1 - P.win;
-    const shown = P.done ? (isA ? P.pa : P.pb) : P.live ? (isA ? P.la : P.lb) : null;
-    const proj = P.done ? null : (isA ? P.pa : P.pb);
-    const fav = wp >= .5;
-    return `<div class="mu-side ${right ? 'r' : ''}">
-      <span class="mu-av ${fav ? 'fav' : 'dog'}">${avatar(t.avatar, t.name, 'lg')}</span>
-      <div class="mu-txt"><div class="mu-mgr">@${esc(t.manager)}</div><div class="mu-tn"><span class="tlink" data-team="${r}">${esc(t.name)}</span></div></div>
-      <div class="mu-score ${P.done && wp === 1 ? 'won' : ''}">${shown != null ? f1(shown) : '–'}</div>
-      <div class="mu-bar ${fav ? 'fav' : 'dog'}"><i style="width:${(P.done ? (wp === 1 ? 100 : wp === 0 ? 0 : 50) : wp * 100).toFixed(0)}%"></i></div>
-      <div class="mu-meta"><b>${P.done ? (wp === 1 ? 'Sieg' : wp === 0 ? 'Niederlage' : 'Remis') : f0(wp * 100) + ' %'}</b><span>${T ? `${T.w}–${T.l}${T.t ? '–' + T.t : ''}` : ''}</span><span class="mu-proj">${proj != null ? 'erw. ' + f1(proj) : ''}</span></div>
+  const strip = P => {
+    const ta = C.team[P.a], tb = C.team[P.b];
+    const kicks = P.done ? [] : [P.a, P.b].flatMap(r => { const m = ms.find(x => x.roster_id === r); return (m && m.starters || []).filter(x => x && x !== '0').map(pid => kickoff(nflGame(nflTeam(pid), w))); }).filter(k => k && k.getTime() > Date.now()).sort((x, y) => x - y);
+    return `<div class="ck-strip sp-strip">
+      <div><span class="l">${P.done ? 'Ergebnis' : 'Siegchance'}</span><span class="v ${P.win >= .5 ? 'good' : 'bad'}">${P.done ? (P.win === 1 ? 'Sieg' : P.win === 0 ? 'Niederlage' : 'Remis') : f0(P.win * 100) + ' : ' + f0((1 - P.win) * 100)}</span></div>
+      <div><span class="l">${P.done ? 'Abstand' : 'Erwarteter Abstand'}</span><span class="v">${sgn(P.pa - P.pb)}</span></div>
+      <div><span class="l">Ø Punkte</span><span class="v">${ta ? f1(ta.avg) : '–'} : ${tb ? f1(tb.avg) : '–'}</span></div>
+      <div><span class="l">${P.done ? 'Woche' : 'Nächster Anstoß'}</span><span class="v">${P.done ? 'beendet' : kicks.length ? esc(fmtKick(kicks[0])) : 'alle Spiele laufen'}</span></div>
     </div>`;
   };
   return `
   ${head('Spieltag', `Woche ${w} · ${pairs.length} Spiele${pairs.some(p => p.live) ? ' · läuft' : ''}`)}
-  <div class="filters"><span class="muted small">Woche</span><select class="sel" id="spWeek" aria-label="Woche">${weeks.map(x => `<option value="${x}" ${x === w ? 'selected' : ''}>Woche ${x}</option>`).join('')}</select>${qm(`Alle Paarungen der Woche. Vor und während des Spieltags zeigt der Balken die Siegchance aus den erwarteten Punkten: Spieler, deren NFL-Spiel schon läuft, zählen mit ihren Live-Punkten, der Rest mit Projektion, Form und Saisonschnitt. Für vergangene Wochen steht der Endstand da. Ein Klick auf ein Spiel zeigt das Spielfeld und beide Aufstellungen.`)}</div>
-  <div class="mu-grid">${pairs.map(P => `<div class="mu-card ${P.a === me || P.b === me ? 'mine' : ''}" data-match="${P.w}:${P.a}" role="button" tabindex="0" aria-label="Paarung öffnen">${side(P, P.a, false)}<span class="mu-vs">VS</span>${side(P, P.b, true)}</div>`).join('')}</div>`;
+  <div class="filters"><span class="muted small">Woche</span><select class="sel" id="spWeek" aria-label="Woche">${weeks.map(x => `<option value="${x}" ${x === w ? 'selected' : ''}>Woche ${x}</option>`).join('')}</select>${qm(`Alle Paarungen der Woche, dein Spiel oben. Der Ball steht bei der Siegchance des linken Teams: in der Mitte heißt 50 zu 50, je näher an einer Endzone, desto klarer der Favorit. Vor und während des Spieltags zählen Spieler, deren NFL-Spiel schon läuft, mit ihren Live-Punkten, der Rest mit Projektion, Form und Saisonschnitt. Für vergangene Wochen steht der Endstand da. Ein Klick auf ein Spiel zeigt beide Aufstellungen.`)}</div>
+  <div class="sp-list">${pairs.map(P => { const mine = P.a === me || P.b === me; return `<section class="sp-match ${mine ? 'mine' : ''}" data-match="${P.w}:${P.a}" role="button" tabindex="0" aria-label="Paarung öffnen">
+    ${matchStage(P, {eyebrow: `${mine ? 'Dein Spiel' : 'Woche ' + P.w} · ${P.done ? 'Endstand' : P.live ? 'Spiel läuft' : 'noch nicht begonnen'}`})}${strip(P)}</section>`; }).join('')}</div>`;
 };
 VIEWS.cockpit = () => {
   const C = S.C, me = S.myRid, t = S.teamByRid[me], T = C.team[me], n = S.teams.length;
