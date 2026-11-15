@@ -94,10 +94,11 @@ def name_key(n):
     return " ".join(w for w in n.split() if w not in ("jr", "sr", "ii", "iii", "iv", "v"))
 
 
-def build_history(Y, cache, out, meta_by_gsis, pfr2gsis):
-    """Saisonbilanz je Spieler für eine abgeschlossene Saison, Grundlage für die Draft-Planung."""
+def build_history(Y, cache, out, meta_by_gsis, pfr2gsis, force=False):
+    """Saisonbilanz je Spieler, Grundlage für die Draft-Planung. Abgeschlossene Saisons werden nur einmal gebaut,
+    die laufende (force=True) jede Nacht neu."""
     path_out = os.path.join(out, f'history_{Y}.json')
-    if os.path.exists(path_out):
+    if os.path.exists(path_out) and not force:
         print(f'history_{Y}.json existiert, Saison abgeschlossen: übersprungen')
         return
     stats_p = fetch(f'stats_player/stats_player_week_{Y}.csv', cache)
@@ -455,9 +456,9 @@ def main():
     dump('ids.json', {'espn': ids_espn, 'name': ids_name})
     # Vorsaisons für die Draft-Planung (abgeschlossene Saisons werden nur einmal gebaut)
     hist = []
-    for Y in range(S - 3, S):
+    for Y in range(S - 3, S + 1):
         try:
-            build_history(Y, a.cache, a.out, meta_full, pfr2gsis)
+            build_history(Y, a.cache, a.out, meta_full, pfr2gsis, force=(Y == S))
             hist.append(f'history_{Y}.json')
         except Exception as e:
             print(f'Vorsaison {Y} übersprungen: {e}', file=sys.stderr)

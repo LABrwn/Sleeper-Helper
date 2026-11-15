@@ -522,6 +522,44 @@ td.tx-st{background:rgba(61,123,255,.18);font-weight:600}
 [data-device="mobile"] .mc-n{font-size:.8rem}
 [data-device="mobile"] .mc-v{font-size:.95rem}
 [data-device="mobile"] .mc-grid{padding:10px 12px 6px}
+.tier-br td{border-top:2px solid rgba(168,85,247,.55)}
+.dh-goal td:first-child{box-shadow:inset 3px 0 0 var(--good)}
+.dh-avoid{opacity:.5}
+.dh-mk{display:inline-flex;gap:4px}
+.dh-win{width:auto!important;flex:0 0 auto;padding:6px 14px;font-size:.84rem;margin-left:auto}
+.dh-mk .seg{padding:3px 9px}
+.dh-c{display:inline-block;margin:0 14px 4px 0;white-space:nowrap}
+.dl-status{display:flex;flex-direction:column;gap:4px;padding:16px 20px;margin:0 0 18px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
+.dl-status b{font-family:var(--f-display);font-size:1.25rem}
+.dl-status span{color:var(--muted);font-size:.9rem}
+.dl-status.now{background:linear-gradient(90deg,rgba(61,123,255,.35),rgba(168,85,247,.25));border-color:var(--mine);box-shadow:0 0 0 1px var(--mine),0 0 40px -10px rgba(61,123,255,.8);animation:dlPulse 1.6s ease-in-out infinite alternate}
+.dl-status.now b{font-size:1.5rem}
+@keyframes dlPulse{from{box-shadow:0 0 0 1px var(--mine),0 0 24px -12px rgba(61,123,255,.6)}to{box-shadow:0 0 0 1px var(--mine),0 0 48px -6px rgba(61,123,255,.95)}}
+@media (prefers-reduced-motion:reduce){.dl-status.now{animation:none}}
+.dl-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:18px;align-items:start}
+@media (max-width:1050px){.dl-grid{grid-template-columns:1fr}}
+.dl-rec{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 4px;border-top:1px solid var(--line)}
+.dl-rec:first-of-type{border-top:0}
+.dl-rec.top{background:rgba(61,123,255,.08);border-radius:12px;padding:12px;border-top:0}
+.dl-rn{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--raised);font-weight:700;font-size:.85rem}
+.dl-rec.top .dl-rn{background:var(--mine);color:#fff}
+.dl-why{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.dl-why span{font-size:.74rem;padding:2px 8px;border-radius:999px;background:var(--raised);color:var(--text)}
+.dl-rv{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.dl-rv b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+.dl-rv small{color:var(--muted);font-size:.7rem}
+.dl-p{font-size:.74rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--raised);white-space:nowrap}
+.dl-p.good{color:var(--good)} .dl-p.bad{color:var(--bad)} .dl-p.warn{color:var(--warn)}
+.dl-pos{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.86rem}
+.dl-pos:first-of-type{border-top:0}
+.dl-pl{display:inline-flex;gap:6px;align-items:center}
+.dl-pl small{color:var(--muted)}
+.dl-team{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:.84rem}
+.dl-team>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl-need{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;font-size:.72rem;background:var(--raised);color:var(--muted)}
+.dl-need.open{color:var(--warn);background:rgba(251,146,60,.12)}
+.dl-pick{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:.86rem}
+.dl-pick.mine{background:rgba(61,123,255,.08);border-radius:8px;padding:7px 6px}
 .mchip{font-size:.66rem;margin-left:4px;vertical-align:1px}
 .pc-head{height:160px}
 .pc-badge{width:clamp(52px,5vw,72px);height:clamp(52px,5vw,72px);border-radius:16px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1.3rem;background:var(--raised);border:2px solid var(--line);box-shadow:0 10px 24px -8px rgba(0,0,0,.9)}
@@ -813,7 +851,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15c</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15d</span></footer>
 
 <script>
 "use strict";
@@ -1528,16 +1566,16 @@ async function loadDetails(){
 }
 
 async function loadPlayers(){
-  const c = await idb.get('players3');
+  const c = await idb.get('players4');
   if (c && Date.now() - c.t < 12*3600e3 && c.d) return c.d;
   const d = await api('/players/nfl') || {};
   const slim = {};
   for (const [id,p] of Object.entries(d)){
     if (!p) continue;
     const n = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-    slim[id] = {n, pos:p.position, fp:p.fantasy_positions, t:p.team, inj:p.injury_status, injp:p.injury_body_part, act:p.active, st:p.status, age:p.age, g:(p.gsis_id || '').trim() || undefined, e:p.espn_id != null ? String(p.espn_id) : undefined};
+    slim[id] = {n, pos:p.position, fp:p.fantasy_positions, t:p.team, inj:p.injury_status, injp:p.injury_body_part, act:p.active, st:p.status, age:p.age, g:(p.gsis_id || '').trim() || undefined, e:p.espn_id != null ? String(p.espn_id) : undefined, ye:p.years_exp};
   }
-  idb.set('players3', {t:Date.now(), d:slim});
+  idb.set('players4', {t:Date.now(), d:slim});
   return slim;
 }
 
@@ -1891,6 +1929,7 @@ function rememberSel(){ try { if (S.league && S.myRid != null) localStorage.setI
 function forgetSel(){ try { localStorage.removeItem('sh-last'); } catch(e){} }
 async function chooseTeam(rid){
   S.myRid = rid; rememberSel();
+  try { const v = new URL(location.href).searchParams.get('view'); if (v && VIEWS[v]) S.view = v; } catch(e){}
   if (!S.C){
     renderLoading('Saisondaten werden geladen …');
     const el = app.querySelector('.loading'); el.insertAdjacentHTML('beforeend', `<div style="width:min(420px,90vw)">${progressHTML()}</div>`);
@@ -1947,7 +1986,7 @@ const TABS = [
     {l:'Tabelle', kids:[['league','Übersicht'],['ranks','Saisonverlauf'],['history','Historie']]},
     {l:'Coaching', kids:[['coaching','Coaching']]},
     {l:'Kader', kids:[['positions','Positionsstärke'],['depth','Kadertiefe'],['compare','Kader-Vergleich']]},
-    {l:'Draft', kids:[['draft','Board & Noten'],['mydraft','Meine Draft-Bilanz']]},
+    {l:'Draft', kids:[['dlive','Live-Draft'],['dprep','Draft-Board'],['dplan','Draft-Plan'],['draft','Rückblick & Noten'],['mydraft','Meine Draft-Bilanz']]},
     {l:'Transaktionen', kids:[['transactions','Transaktionen']]},
     {l:'Konstanz', kids:[['consistency','Spieler-Konstanz']]},
   ]},
@@ -2063,6 +2102,380 @@ function renderView(){
   if (isM()) markTabs(); else syncNav();
 }
 let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { navFade(); if (S.C && document.getElementById('view')) (S.charts || []).forEach(fn => fn()); }, 150); });
+
+/* ============================================================
+   Draft-Helper: Board, Plan und Live-Modus (gedacht fürs zweite Fenster am PC)
+   Maßstab ist die Sleeper-Saisonprojektion in eurem Scoring. Die NFL-Daten liefern nur Hinweise daneben.
+   ============================================================ */
+S.dh = {proj:null, loading:false, err:null, pos:'ALL', q:'', only:false, live:null, timer:null, slot:null, title:null};
+const DH_VIEWS = ['dlive','dprep','dplan'];
+const dhType = () => ({1:'Keeper', 2:'Dynasty'})[(S.league.settings || {}).type] || 'Redraft';
+const dhSuperflex = () => S.slots.includes('SUPER_FLEX') || S.slots.filter(s => s === 'QB').length > 1;
+function dhAdpKeys(){
+  const rec = (S.league.scoring_settings || {}).rec ?? 0, dyn = (S.league.settings || {}).type === 2, sf = dhSuperflex();
+  const base = rec >= .75 ? 'ppr' : rec >= .25 ? 'half_ppr' : 'std', keys = [];
+  if (dyn) keys.push(sf ? 'adp_dynasty_2qb' : 'adp_dynasty_' + base, 'adp_dynasty_ppr', 'adp_dynasty');
+  if (sf) keys.push('adp_2qb');
+  keys.push('adp_' + base, 'adp_ppr', 'adp_half_ppr', 'adp_std');
+  return keys;
+}
+/* Draft-Eckdaten aus Sleeper: Teams, Runden, Art, 3rd-Round-Reversal, Budget */
+function dhInfo(d){
+  const st = (d && d.settings) || {};
+  const R = st.rounds || (S.league.roster_positions || []).filter(s => !['IR','TAXI'].includes(s)).length;
+  return {T: st.teams || S.teams.length, R, type: (d && d.type) || 'snake', rev: st.reversal_round || 0, budget: st.budget || 200, status: d && d.status};
+}
+const dhTypeLbl = t => ({snake:'Snake', linear:'Linear', auction:'Auktion'})[t] || t;
+/* Pick-Nummern eines Draft-Platzes */
+function dhPickNos(slot, I){
+  const out = [];
+  for (let r = 1; r <= I.R; r++){
+    let flip = I.type === 'snake' && r % 2 === 0;
+    if (I.type === 'snake' && I.rev && r >= I.rev) flip = !flip;
+    out.push({r, no:(r - 1) * I.T + (flip ? I.T - slot + 1 : slot)});
+  }
+  return out;
+}
+const dhSlotOf = (no, I) => { const r = Math.ceil(no / I.T), k = no - (r - 1) * I.T; let flip = I.type === 'snake' && r % 2 === 0; if (I.type === 'snake' && I.rev && r >= I.rev) flip = !flip; return flip ? I.T - k + 1 : k; };
+async function dhLoad(){
+  if (S.dh.proj || S.dh.loading) return;
+  S.dh.loading = true; S.dh.err = null;
+  try {
+    const pos = S.leaguePos.map(p => 'position[]=' + p).join('&');
+    const d = await api(`${API_X}/projections/nfl/${S.league.season}?season_type=regular&${pos}&order_by=adp_ppr`);
+    const keys = dhAdpKeys(), out = {};
+    for (const it of (Array.isArray(d) ? d : [])){
+      if (!it || !it.player_id || !it.stats) continue;
+      const st = it.stats, pts = scorePts(st) || 0;
+      let adp = null; for (const k of keys){ const v = st[k]; if (typeof v === 'number' && v > 0 && v < 400){ adp = v; break; } }
+      if (pts <= 0 && adp == null) continue;
+      out[it.player_id] = {pts, adp};
+    }
+    if (!Object.keys(out).length) throw new Error(`Sleeper liefert für die Saison ${S.league.season} noch keine Saisonprojektionen. Sie erscheinen meist im Frühsommer.`);
+    S.dh.proj = out; S.dh.calc = null;
+  } catch(e){ S.dh.err = /Saisonprojektionen/.test(e.message || '') ? e.message : `Die Saisonprojektionen von Sleeper sind gerade nicht erreichbar. Der Draft-Helper braucht sie als Grundlage. Sleeper veröffentlicht sie meist im Frühsommer vor der Saison.`; }
+  if (S.nx) { try { await loadHist(); } catch(e){} }
+  S.dh.loading = false;
+  if (DH_VIEWS.includes(S.view)) renderView();
+}
+function dhGate(title){
+  if (S.dh.proj) return '';
+  if (!S.dh.loading && !S.dh.err) dhLoad();
+  S.after.push(() => { const b = document.getElementById('dhRetry'); if (b) b.addEventListener('click', () => { S.dh.err = null; renderView(); }); });
+  return head(title) + (S.dh.err ? `<div class="note">${esc(S.dh.err)} <button class="btnlike ghost dh-win" id="dhRetry" style="margin:8px 0 0">Erneut versuchen</button></div>` : `<div class="loading small"><div class="spin"></div>Saisonprojektionen werden von Sleeper geladen …</div>`);
+}
+/* Markierungen „Ziel“ und „Meiden“, nur im eigenen Browser */
+function dhMarks(){ if (S.dh.marks) return S.dh.marks; try { S.dh.marks = JSON.parse(localStorage.getItem('sh-dmark-' + S.league.league_id) || '{}'); } catch(e){ S.dh.marks = {}; } return S.dh.marks; }
+function dhSetMark(pid, v){ const m = dhMarks(); if (m[pid] === v) delete m[pid]; else m[pid] = v; try { localStorage.setItem('sh-dmark-' + S.league.league_id, JSON.stringify(m)); } catch(e){} }
+/* Wert über Ersatzniveau, Stufen, Dollarwerte */
+function dhCalc(){
+  if (S.dh.calc) return S.dh.calc;
+  const I = dhInfo(S.dh.live && S.dh.live.d || S.draft), P = S.dh.proj;
+  const list = Object.entries(P).map(([pid, x]) => ({pid, pos:normPos(pos1(pid)), pts:x.pts, adp:x.adp})).filter(x => x.pos && S.leaguePos.includes(x.pos)).sort((a,b) => b.pts - a.pts);
+  /* Ersatzniveau: alle Startplätze aller Teams mit den besten Spielern füllen, enge Slots zuerst. Der beste Übrige je Position ist das Ersatzniveau. */
+  const used = new Set();
+  for (const sl of [...S.slots].sort((a,b) => elig(a).length - elig(b).length)){
+    const e = elig(sl).map(normPos);
+    for (let t = 0; t < I.T; t++){ const c = list.find(x => !used.has(x.pid) && e.includes(x.pos)); if (c) used.add(c.pid); }
+  }
+  const repl = {};
+  for (const p of S.leaguePos){ const c = list.find(x => x.pos === p && !used.has(x.pid)); repl[p] = c ? c.pts : 0; }
+  list.forEach(x => x.vor = x.pts - repl[x.pos]);
+  /* Stufen: neue Stufe, wo der Abstand zum Vordermann deutlich größer ist als üblich */
+  const byPos = {};
+  list.forEach(x => (byPos[x.pos] = byPos[x.pos] || []).push(x));
+  for (const arr of Object.values(byPos)){
+    const top = arr.slice(0, 50), gaps = top.slice(1).map((x, i) => top[i].pts - x.pts).sort((a,b) => a - b), med = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+    let tier = 1;
+    arr.forEach((x, i) => { x.prk = i + 1; if (i && i < 50 && arr[i - 1].pts - x.pts > Math.max(.04 * arr[0].pts, 2.2 * med, 3)) tier++; x.tier = i < 50 ? tier : null; });
+  }
+  const byV = [...list].sort((a,b) => b.vor - a.vor); byV.forEach((x, i) => x.vrk = i + 1);
+  if (I.type === 'auction'){
+    const N = I.T * I.R, pos = byV.slice(0, N).filter(x => x.vor > 0), tot = sum(pos.map(x => x.vor)), pool = Math.max(0, I.T * I.budget - N);
+    byV.forEach(x => x.usd = x.vor > 0 && tot ? Math.max(1, Math.round(1 + x.vor / tot * pool)) : 1);
+  }
+  return S.dh.calc = {list:byV, by:Object.fromEntries(byV.map(x => [x.pid, x])), repl, I};
+}
+/* Höchstens drei Hinweise neben der Zahl: Wert gegenüber ADP, Spiele pro Saison, Trend. Dazu Rookie und (Dynasty/Keeper) Alter. */
+function dhHints(x){
+  const out = [], rv = (S.league.scoring_settings || {}).rec ?? 0;
+  if (x.adp && x.vrk <= 200){
+    const d = x.adp - x.vrk, lim = Math.max(8, .3 * Math.min(x.adp, x.vrk));
+    if (d >= lim) out.push({c:'good', t:'Schnäppchen', h:`Sein Wert entspricht Rang ${x.vrk}, gezogen wird er im Schnitt erst an ${f0(x.adp)}. Er fällt also oft weiter, als er sollte.`});
+    else if (-d >= lim) out.push({c:'warn', t:'teuer', h:`Gezogen wird er im Schnitt an ${f0(x.adp)}, sein Wert entspricht aber erst Rang ${x.vrk}.`});
+  }
+  const H = S.nxH, gs = gsisOf(x.pid), cur = +S.league.season;
+  if (H && gs){
+    const seas = Object.keys(H).map(Number).filter(y => y < cur).sort((a,b) => b - a).map(y => ({y, r:H[y][gs]})).filter(s => s.r);
+    if (seas.length){
+      const gAvg = avg(seas.map(s => s.r.g));
+      if (seas.length >= 2 ? gAvg < 12 : seas[0].r.g < 10) out.push({c:'bad', t:'wenige Spiele', h:`Im Schnitt ${f1(gAvg)} Spiele in den letzten ${seas.length} Saisons. Das deutet auf Verletzungen oder eine wackelige Rolle hin.`});
+      if (seas.length >= 2 && seas[0].r.g >= 8 && seas[1].r.g >= 8){
+        const pg = s => (s.r.std + rv * s.r.rec) / s.r.g, a = pg(seas[1]), b = pg(seas[0]);
+        if (a > 3 && b / a >= 1.2) out.push({c:'good', t:'Trend ↑', h:`${f1(b)} Punkte pro Spiel ${seas[0].y}, davor ${f1(a)}.`});
+        else if (a > 3 && b / a <= .8) out.push({c:'bad', t:'Trend ↓', h:`${f1(b)} Punkte pro Spiel ${seas[0].y}, davor ${f1(a)}.`});
+      }
+    }
+  }
+  const p = S.players && S.players[x.pid] || {};
+  if (p.ye === 0) out.push({c:'plain', t:'Rookie', h:'Erste NFL-Saison: Die Projektion beruht nur auf Draftposition und Rolle.'});
+  if ((S.league.settings || {}).type && p.age){
+    const old = {QB:35, RB:27, WR:30, TE:31}[x.pos];
+    if (old && p.age >= old) out.push({c:'warn', t:p.age + ' Jahre', h:'In einer Liga, in der Spieler behalten werden, zählt das Alter: Ab diesem Alter fallen Leistungen auf der Position oft ab.'});
+  }
+  return out.slice(0, 3);
+}
+const dhChips = x => dhHints(x).map(h => ` <span class="chip ${h.c} mchip" title="${esc(h.h)}">${esc(h.t)}</span>`).join('');
+/* Chance, dass ein Spieler an Pick n noch da ist (ADP mit Streuung), optional bedingt darauf, dass er an Pick now noch da ist */
+const dhSd = adp => Math.max(2.5, .2 * adp);
+function dhAvail(x, n, now){
+  if (!x.adp) return null;
+  const p = q => 1 - normCdf((q - .5 - x.adp) / dhSd(x.adp));
+  if (!now) return p(n);
+  const b = p(now); return b > .01 ? Math.min(1, p(n) / b) : p(n);
+}
+/* Bedarf: wie dringend braucht ein Kader noch diese Position? */
+/* Bedarf: Feste Startplätze zuerst, FLEX-Plätze teilen sich alle berechtigten Positionen, danach Bank mit abnehmendem Wert */
+const dhDed = pos => S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === pos; }).length;
+function dhNeedF(pos, have, round, I, left){
+  const h = p => have[p] || 0, ded = dhDed(pos), mine = h(pos);
+  /* Spät wird es, wenn kaum noch Picks übrig sind, um alle festen Startplätze zu füllen */
+  const missing = S.leaguePos.reduce((a, p) => a + Math.max(0, dhDed(p) - h(p)), 0);
+  const late = left != null ? left <= missing + 1 : round > I.R - 2;
+  if (['K','DEF'].includes(pos)) return mine >= ded ? .05 : (left != null ? left <= 2 + Math.max(0, missing - (dhDed('K') - h('K') > 0) - (dhDed('DEF') - h('DEF') > 0)) : late) ? 6 : .05;
+  if (mine < ded) return late ? 2 : 1.15;
+  /* FLEX: offene Plätze, in die diese Position passt, nach Abzug der Überzähligen aller Positionen */
+  const flexes = S.slots.filter(s => elig(s).length > 1 && elig(s).map(normPos).includes(pos));
+  let open = flexes.length;
+  if (open){
+    const fe = new Set(flexes.flatMap(s => elig(s).map(normPos)));
+    const extra = [...fe].reduce((a, p) => a + Math.max(0, h(p) - dhDed(p)), 0);
+    open -= extra;
+  }
+  if (pos === 'QB' && !dhSuperflex()) return mine >= 2 ? .1 : .35;
+  if (open > 0) return 1;
+  const bench = mine - ded - Math.max(0, flexes.length ? 1 : 0);
+  return bench <= 0 ? .55 : bench === 1 ? .4 : .2;
+}
+const dhScore = (x, f, mark) => { let s = f >= 2 ? Math.max(x.vor, 0) * f + 50 * f : x.vor >= 0 ? x.vor * f : x.vor / Math.max(f, .05); if (mark === 1) s += Math.abs(s) * .1 + 1; if (mark === -1) s -= Math.abs(s) * .5 + 5; return s; };
+const dhPosLbl = x => `${x.pos}${x.prk}`;
+const dhOpenWin = () => `<button class="btnlike ghost dh-win" data-dhwin>Live-Draft im eigenen Fenster</button>`;
+
+/* ---------- Ansicht Draft-Board ---------- */
+VIEWS.dprep = () => {
+  const g = dhGate('Draft-Board'); if (g) return g;
+  const C = dhCalc(), I = C.I, mk = dhMarks(), auc = I.type === 'auction';
+  S.after.push(() => {
+    document.querySelectorAll('[data-dpos]').forEach(b => b.addEventListener('click', () => { S.dh.pos = b.dataset.dpos; renderView(); }));
+    const q = document.getElementById('dhQ'); if (q){ q.addEventListener('input', e => { S.dh.q = e.target.value; clearTimeout(S.dh.qt); S.dh.qt = setTimeout(() => { renderView(); const n = document.getElementById('dhQ'); if (n){ n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); }); }
+    const o = document.getElementById('dhOnly'); if (o) o.addEventListener('change', e => { S.dh.only = e.target.checked; renderView(); });
+  });
+  const q = nameKey(S.dh.q);
+  let rows = C.list.filter(x => (S.dh.pos === 'ALL' || x.pos === S.dh.pos) && (!q || nameKey(pname(x.pid)).includes(q)) && (!S.dh.only || mk[x.pid]));
+  const more = rows.length > (S.dh.pos === 'ALL' ? 150 : 60);
+  rows = rows.slice(0, S.dh.pos === 'ALL' ? 150 : 60);
+  const steals = C.list.slice(0, I.T * I.R).filter(x => dhHints(x).some(h => h.t === 'Schnäppchen')).length;
+  return `
+  ${head('Draft-Board', `${dhType()} · ${dhTypeLbl(I.type)} · ${I.T} Teams · ${I.R} Runden · ${scoringLabel()}${dhSuperflex() ? ' · Superflex' : ''}`, undefined, `Sortiert nach Draft-Wert: projizierte Saisonpunkte in eurem Scoring (Sleeper-Projektion) minus dem Ersatzniveau der Position. Ersatzniveau ist der beste Spieler, der übrig bleibt, wenn alle Startplätze aller ${I.T} Teams besetzt sind. So lassen sich Spieler verschiedener Positionen direkt vergleichen. Stufe: Spieler, die praktisch gleich gut sind. Wo eine Stufe endet, wird es Zeit für die Position.`)}
+  <div class="kpis">
+    ${S.leaguePos.filter(p => ['QB','RB','WR','TE'].includes(p)).map(p => kpi(f0(C.repl[p]), `Ersatzniveau ${p}`, 'projizierte Saisonpunkte')).join('')}
+    ${kpi(String(steals), 'Schnäppchen', 'unter den draftbaren Spielern')}
+  </div>
+  <section class="panel"><div class="panel-head"><h3>Wo die Positionen wegbrechen</h3>${qm('Projizierte Saisonpunkte nach Positionsrang. Ein steiler Abfall heißt: Danach kommt deutlich weniger, die Position also eher früh besetzen. Ein flacher Verlauf heißt: Hier kann man warten. Die Punkte markieren den Beginn einer neuen Stufe.')}</div>${dhCliffs(C)}</section>
+  <section class="panel"><div class="panel-head"><h3>Alle Spieler</h3>${dhOpenWin()}</div>
+    <div class="filters">${['ALL', ...S.leaguePos].map(p => `<button class="seg" data-dpos="${p}" aria-pressed="${S.dh.pos === p}">${p === 'ALL' ? 'Alle' : p}</button>`).join('')}
+      <input class="sel" id="dhQ" type="search" placeholder="Spieler suchen" value="${esc(S.dh.q)}" aria-label="Spieler suchen" style="min-width:12em">
+      <label class="small muted"><input type="checkbox" id="dhOnly" ${S.dh.only ? 'checked' : ''}> nur markierte</label></div>
+    <div class="tbl-wrap"><table><thead><tr><th class="n">Wert-Rang</th><th>Spieler</th><th>Position</th><th class="n">Proj. Punkte</th><th class="n">Draft-Wert</th><th class="n">ADP</th>${auc ? '<th class="n">Auktionswert</th>' : ''}<th>Markieren</th></tr></thead><tbody>
+    ${rows.map((x, i) => { const br = S.dh.pos !== 'ALL' && i && rows[i - 1].tier !== x.tier; return `<tr class="${br ? 'tier-br' : ''} ${mk[x.pid] === 1 ? 'dh-goal' : mk[x.pid] === -1 ? 'dh-avoid' : ''}"><td class="n">${x.vrk}</td><td>${playerCell(x.pid, dhChips(x))}</td><td><b>${dhPosLbl(x)}</b>${x.tier ? `<div class="pmeta">Stufe ${x.tier}</div>` : ''}</td><td class="n">${f0(x.pts)}</td><td class="n" style="font-weight:700">${sgn(x.vor)}</td><td class="n">${x.adp ? f1(x.adp) : '–'}</td>${auc ? `<td class="n">$${x.usd}</td>` : ''}
+      <td><span class="dh-mk"><button class="seg" data-dmark="${esc(x.pid)}:1" aria-pressed="${mk[x.pid] === 1}" title="Ziel">★</button><button class="seg" data-dmark="${esc(x.pid)}:-1" aria-pressed="${mk[x.pid] === -1}" title="Meiden">✕</button></span></td></tr>`; }).join('')}
+    </tbody></table></div>${more ? '<p class="small muted">Weitere Spieler über die Suche oder den Positionsfilter.</p>' : ''}
+    <p class="small muted">Projektionen und ADP: Sleeper. Hinweise aus den NFL-Daten der letzten Saisons. „Ziel“ und „Meiden“ bleiben nur in diesem Browser gespeichert und fließen in die Empfehlungen im Live-Draft ein.</p></section>`;
+};
+/* Abbruchkanten: projizierte Punkte nach Positionsrang */
+function dhCliffs(C){
+  const ps = S.leaguePos.filter(p => ['QB','RB','WR','TE'].includes(p)), N = 36;
+  const ser = ps.map(p => ({p, a:C.list.filter(x => x.pos === p).sort((a,b) => a.prk - b.prk).slice(0, N)}));
+  const max = Math.max(1, ...ser.flatMap(s => s.a.map(x => x.pts)));
+  const W = 900, H = 260, ml = 40, mr = 70, mt = 12, mb = 28, X = i => ml + (W - ml - mr) * i / (N - 1), Y = v => mt + (H - mt - mb) * (1 - v / max);
+  const col = {QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)'};
+  let g = '';
+  [0, .25, .5, .75, 1].forEach(f => g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(max * f)}" y2="${Y(max * f)}" stroke="var(--line)"/><text x="${ml - 6}" y="${Y(max * f) + 4}" text-anchor="end">${f0(max * f)}</text>`);
+  [1, 6, 12, 18, 24, 30, 36].forEach(r => g += `<text x="${X(r - 1)}" y="${H - 8}" text-anchor="middle">${r}</text>`);
+  for (const s of ser){
+    if (s.a.length < 2) continue;
+    g += `<path d="${s.a.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x.pts).toFixed(1)}`).join('')}" fill="none" stroke="${col[s.p]}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    s.a.forEach((x, i) => { if (i && s.a[i - 1].tier !== x.tier) g += `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.pts).toFixed(1)}" r="3.6" fill="${col[s.p]}"><title>${esc(pname(x.pid))}: Beginn Stufe ${x.tier} (${dhPosLbl(x)})</title></circle>`; });
+    const l = s.a[s.a.length - 1]; g += `<text x="${X(s.a.length - 1) + 6}" y="${Y(l.pts) + 4}" style="fill:${col[s.p]};font-weight:700">${s.p}</text>`;
+  }
+  return `<div class="chart pc-chart"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Projizierte Punkte nach Positionsrang">${g}</svg></div><p class="small muted">x-Achse: Positionsrang · y-Achse: projizierte Saisonpunkte in eurem Scoring</p>`;
+}
+
+/* ---------- Ansicht Draft-Plan ---------- */
+function dhMySlot(d){
+  const own = S.teamByRid[S.myRid] && S.teamByRid[S.myRid].roster.owner_id;
+  if (d && d.draft_order && own && d.draft_order[own]) return +d.draft_order[own];
+  if (d && d.slot_to_roster_id){ const e = Object.entries(d.slot_to_roster_id).find(([, r]) => +r === +S.myRid); if (e) return +e[0]; }
+  return null;
+}
+VIEWS.dplan = () => {
+  const g = dhGate('Draft-Plan'); if (g) return g;
+  const C = dhCalc(), I = C.I, mk = dhMarks(), mine = dhMySlot(S.draft);
+  const slot = S.dh.slot || mine || 1;
+  S.after.push(() => { const el = document.getElementById('dhSlot'); if (el) el.addEventListener('change', e => { S.dh.slot = +e.target.value; renderView(); }); });
+  if (I.type === 'auction') return head('Draft-Plan') + `<div class="note">Bei einer Auktion gibt es keine feste Pickfolge. Nutze das Draft-Board mit den Auktionswerten und im Draft den Live-Modus.</div>`;
+  /* Plan: an jedem eigenen Pick der beste Spieler, der dort mit mindestens 50 % noch da ist, gewichtet nach Bedarf */
+  const picks = dhPickNos(slot, I), taken = new Set(), have = {}, plan = [];
+  for (const [ix, pk] of picks.entries()){
+    const cands = C.list.filter(x => !taken.has(x.pid) && mk[x.pid] !== -1 && (x.adp == null ? x.vrk >= pk.no : dhAvail(x, pk.no) >= .5))
+      .map(x => ({x, s:dhScore(x, dhNeedF(x.pos, have, pk.r, I, picks.length - ix), mk[x.pid]), p:x.adp ? dhAvail(x, pk.no) : null})).sort((a,b) => b.s - a.s);
+    const best = cands[0]; if (!best) continue;
+    taken.add(best.x.pid); have[best.x.pos] = (have[best.x.pos] || 0) + 1;
+    plan.push({pk, best, alt:cands.slice(1, 4)});
+  }
+  const startPts = (() => { const sel = plan.map(p => ({pid:p.best.x.pid, pts:p.best.x.pts})); return optimalLineup(sel).total; })();
+  const shape = plan.slice(0, 6).map(p => p.best.x.pos).join(' · ');
+  const pch = (x, p) => `<span class="dh-c">${posChip(x.pos)} <span class="tlink" data-player="${esc(x.pid)}">${esc(pname(x.pid))}</span>${p != null ? ` <span class="muted small">${f0(p * 100)} %</span>` : ''}</span>`;
+  return `
+  ${head('Draft-Plan', `${dhType()} · ${dhTypeLbl(I.type)} · Draftplatz ${slot} von ${I.T}${mine && mine === slot ? ' (deiner)' : ''}`, undefined, `Für jeden deiner Picks: Welche Spieler sind dort laut ADP (durchschnittlicher Draftplatz bei Sleeper) mit mindestens 50 % Wahrscheinlichkeit noch verfügbar? Daraus wählt der Plan den mit dem höchsten Draft-Wert, gewichtet nach dem, was deinem Kader noch fehlt. Kicker und Defense erst in den letzten Runden. Spieler, die du auf „Meiden“ gesetzt hast, fallen raus, „Ziel“-Spieler werden leicht bevorzugt. Der Plan ist eine Orientierung, kein Muss: Der Draft läuft nie genau nach ADP.`)}
+  <div class="filters"><span class="muted small">Draftplatz</span><select class="sel" id="dhSlot" aria-label="Draftplatz">${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<option value="${s}" ${s === slot ? 'selected' : ''}>Platz ${s}${s === mine ? ' (deiner)' : ''}</option>`).join('')}</select>${mine ? '' : '<span class="small muted">Die Draft-Reihenfolge steht in Sleeper noch nicht fest, wähle deinen Platz.</span>'}</div>
+  <div class="kpis">
+    ${kpi(shape, 'Die ersten sechs Runden', 'Positionen laut Plan')}
+    ${kpi(f0(startPts), 'Projizierte Startelf', 'Saisonpunkte der besten Aufstellung aus dem Plan')}
+    ${kpi(`Pick ${picks[0].no} und ${picks[1] ? picks[1].no : '–'}`, 'Deine ersten Picks', picks[1] ? `${picks[1].no - picks[0].no - 1} Picks dazwischen` : '')}
+  </div>
+  <section class="panel"><div class="panel-head"><h3>Runde für Runde</h3>${dhOpenWin()}</div>
+    <div class="tbl-wrap"><table data-nosort><thead><tr><th>Runde</th><th class="n">Pick</th><th>Plan</th><th class="n">Draft-Wert</th><th>Alternativen (Chance, dass er noch da ist)</th></tr></thead><tbody>
+    ${plan.map(p => `<tr><td>${p.pk.r}</td><td class="n">${p.pk.no}</td><td>${pch(p.best.x, p.best.p)}${dhChips(p.best.x)}<div class="pmeta">${dhPosLbl(p.best.x)}${p.best.x.tier ? ' · Stufe ' + p.best.x.tier : ''}</div></td><td class="n">${sgn(p.best.x.vor)}</td><td class="small">${p.alt.map(a => pch(a.x, a.p)).join('')}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+};
+
+/* ---------- Ansicht Live-Draft: verbindet sich mit dem Sleeper-Draft, für ein zweites Fenster neben Sleeper ---------- */
+function dhDraftId(){ try { return S.dh.over || localStorage.getItem('sh-draft-' + S.league.league_id) || S.league.draft_id; } catch(e){ return S.league.draft_id; } }
+async function dhPoll(force){
+  const id = dhDraftId(); if (!id) return;
+  try {
+    const [d, picks] = await Promise.all([api('/draft/' + id), api(`/draft/${id}/picks`)]);
+    const L = S.dh.live, changed = force || !L || L.id !== id || L.picks.length !== (picks || []).length || (L.d && L.d.status) !== (d && d.status);
+    S.dh.live = {id, d, picks:picks || [], at:Date.now(), err:null};
+    if (changed){ S.dh.calc = null; if (S.view === 'dlive') renderView(); }
+    else { const el = document.getElementById('dlAt'); if (el) el.textContent = 'aktualisiert ' + new Date().toLocaleTimeString('de-DE'); }
+  } catch(e){ S.dh.live = {id, d:null, picks:[], err:e.message || String(e)}; if (S.view === 'dlive') renderView(); }
+}
+function dhStartTimer(){
+  if (S.dh.timer) return;
+  S.dh.title = S.dh.title || document.title;
+  S.dh.timer = setInterval(() => {
+    if (S.view !== 'dlive'){ clearInterval(S.dh.timer); S.dh.timer = null; document.title = S.dh.title; return; }
+    const st = S.dh.live && S.dh.live.d && S.dh.live.d.status;
+    if (st === 'complete') return;
+    dhPoll();
+  }, 4000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view === 'dlive') dhPoll(); });
+VIEWS.dlive = () => {
+  const g = dhGate('Live-Draft'); if (g) return g;
+  const id = dhDraftId();
+  S.after.push(() => {
+    const f = document.getElementById('dlForm');
+    if (f) f.addEventListener('submit', e => { e.preventDefault(); const v = (document.getElementById('dlId').value.match(/\d{6,}/) || [''])[0]; try { if (v) localStorage.setItem('sh-draft-' + S.league.league_id, v); else localStorage.removeItem('sh-draft-' + S.league.league_id); } catch(_){} S.dh.over = v || null; S.dh.live = null; S.dh.lslot = null; renderView(); });
+    const sl = document.getElementById('dlSlot'); if (sl) sl.addEventListener('change', e => { S.dh.lslot = +e.target.value; renderView(); });
+    document.querySelectorAll('[data-lpos]').forEach(b => b.addEventListener('click', () => { S.dh.lpos = b.dataset.lpos; renderView(); }));
+    dhStartTimer();
+  });
+  const form = `<form class="filters" id="dlForm"><span class="muted small">Draft</span><input class="sel" id="dlId" value="${esc(id || '')}" placeholder="Draft-ID oder Link eines Mock-Drafts" aria-label="Draft-ID" style="min-width:18em"><button class="btnlike ghost" type="submit">Verbinden</button>${id !== S.league.draft_id && S.league.draft_id ? `<span class="small muted">Liga-Draft: ${esc(S.league.draft_id)}</span>` : ''}</form>`;
+  if (!id) return head('Live-Draft') + form + `<div class="note">Für diese Liga gibt es in Sleeper noch keinen Draft. Zum Üben kannst du die ID oder den Link eines Mock-Drafts eintragen.</div>`;
+  const L = S.dh.live;
+  if (!L || L.id !== id){ dhPoll(true); return head('Live-Draft') + form + `<div class="loading small"><div class="spin"></div>Verbinde mit dem Draft …</div>`; }
+  if (L.err || !L.d) return head('Live-Draft') + form + `<div class="note">Der Draft konnte nicht geladen werden: ${esc(L.err || 'unbekannt')}</div>`;
+  const d = L.d, C = dhCalc(), I = dhInfo(d), mk = dhMarks(), auc = I.type === 'auction';
+  const picks = [...L.picks].sort((a,b) => a.pick_no - b.pick_no), taken = new Set(picks.map(p => p.player_id));
+  const mySlot = S.dh.lslot || dhMySlot(d);
+  const cur = picks.length + 1, done = d.status === 'complete' || cur > I.T * I.R;
+  const rOf = n => Math.ceil(n / I.T), slotOfPick = p => p.draft_slot || dhSlotOf(p.pick_no, I);
+  const minePicks = mySlot ? picks.filter(p => slotOfPick(p) === mySlot) : [];
+  const myNext = mySlot && !auc ? dhPickNos(mySlot, I).filter(p => p.no >= cur) : [];
+  const onClock = !auc && !done && myNext.length && myNext[0].no === cur;
+  const target = onClock ? myNext[1] : myNext[0];   // der Pick, auf den es beim Warten ankommt
+  const have = {}; minePicks.forEach(p => { const pos = normPos((p.metadata && p.metadata.position) || pos1(p.player_id)); have[pos] = (have[pos] || 0) + 1; });
+  const round = auc ? 1 : rOf(Math.min(cur, I.T * I.R));
+  const avail = C.list.filter(x => !taken.has(x.pid));
+  const scored = avail.map(x => ({x, s:dhScore(x, dhNeedF(x.pos, have, myNext[0] ? myNext[0].r : round, I, myNext.length || null), mk[x.pid])})).sort((a,b) => b.s - a.s);
+  const topV = avail[0];
+  const why = x => {
+    const r = [];
+    if (topV && x.pid === topV.pid) r.push('höchster Draft-Wert');
+    if (x.tier){ const same = avail.filter(y => y.pos === x.pos && y.tier === x.tier).length; if (same === 1) r.push(`letzter aus Stufe ${x.tier} (${x.pos})`); else if (same === 2) r.push(`nur noch 2 aus Stufe ${x.tier}`); }
+    const ded = S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === x.pos; }).length;
+    if ((have[x.pos] || 0) < ded) r.push(`${x.pos} fehlt dir noch`);
+    if (!auc && x.adp && x.adp < cur - 3) r.push(`überfällig, ADP ${f0(x.adp)}`);
+    if (mk[x.pid] === 1) r.push('dein Ziel');
+    return r;
+  };
+  const recs = scored.slice(0, 6);
+  /* Titel im Browser-Tab: so sieht man es auch, während man in Sleeper ist */
+  const base = S.dh.title || document.title; S.dh.title = base;
+  document.title = done ? 'Draft beendet · Sleeper Helper' : onClock ? '● DU BIST DRAN · Sleeper Helper' : myNext.length ? `Noch ${myNext[0].no - cur} Picks · Sleeper Helper` : 'Live-Draft · Sleeper Helper';
+  const status = done ? `<div class="dl-status"><b>Der Draft ist beendet.</b><span>${picks.length} Picks. Die Bewertung steht unter „Rückblick & Noten“, sobald die Liga sie von Sleeper bekommt.</span></div>`
+    : d.status === 'pre_draft' ? `<div class="dl-status"><b>Der Draft hat noch nicht begonnen.</b><span>${d.start_time ? 'Start ' + new Date(d.start_time).toLocaleString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) + '. ' : ''}Die Seite aktualisiert sich von selbst, sobald es losgeht.</span></div>`
+    : auc ? `<div class="dl-status"><b>Auktion läuft · ${picks.length} Spieler vergeben</b><span>Unten die besten freien Spieler mit ihrem Auktionswert. Zahle möglichst nicht mehr.</span></div>`
+    : onClock ? `<div class="dl-status now"><b>Du bist dran: Runde ${round}, Pick ${cur}</b><span>Nach diesem Pick kommst du erst wieder an ${myNext[1] ? myNext[1].no : '–'}. Die Prozente zeigen, ob ein Spieler bis dahin noch da wäre.</span></div>`
+    : myNext.length ? `<div class="dl-status"><b>Noch ${myNext[0].no - cur} ${myNext[0].no - cur === 1 ? 'Pick' : 'Picks'} bis zu deinem Pick ${myNext[0].no}</b><span>Runde ${round}, Pick ${cur} ist dran. Die Prozente zeigen, wer an deinem Pick vermutlich noch da ist.</span></div>`
+    : `<div class="dl-status"><b>Runde ${round}, Pick ${cur}</b><span>${mySlot ? 'Du hast keine Picks mehr.' : 'Wähle deinen Draftplatz, damit die Empfehlungen zu deinem Kader passen.'}</span></div>`;
+  const pA = x => target && !auc ? dhAvail(x, target.no, cur) : null;
+  const recHtml = recs.map(({x}, i) => { const p = pA(x); return `<div class="dl-rec ${i === 0 ? 'top' : ''}">
+    <div class="dl-rn">${i + 1}</div>
+    <div class="dl-rb"><div class="pname"><span class="tlink" data-player="${esc(x.pid)}">${esc(pname(x.pid))}</span> ${injChip(x.pid)}${dhChips(x)}</div>
+      <div class="pmeta">${posChip(x.pos)} ${esc(nflTeam(x.pid) || '')} · ${dhPosLbl(x)}${x.tier ? ' · Stufe ' + x.tier : ''} · Proj. ${f0(x.pts)} · ADP ${x.adp ? f0(x.adp) : '–'}</div>
+      ${why(x).length ? `<div class="dl-why">${why(x).map(w => `<span>${esc(w)}</span>`).join('')}</div>` : ''}</div>
+    <div class="dl-rv"><b>${auc ? '$' + x.usd : sgn(x.vor)}</b><small>${auc ? 'Auktionswert' : 'Draft-Wert'}</small>${p != null ? `<span class="dl-p ${p >= .6 ? 'good' : p < .3 ? 'bad' : 'warn'}" title="Chance, dass er an Pick ${target.no} noch verfügbar ist">${f0(p * 100)} % an ${target.no}</span>` : ''}</div></div>`; }).join('');
+  /* Board der freien Spieler */
+  const lpos = S.dh.lpos || 'ALL';
+  const board = avail.filter(x => lpos === 'ALL' || x.pos === lpos).slice(0, 40);
+  /* Mein Kader nach Positionen */
+  const myRows = S.leaguePos.map(p => ({p, ps:minePicks.filter(x => normPos((x.metadata && x.metadata.position) || pos1(x.player_id)) === p)})).filter(r => r.ps.length || S.slots.some(s => elig(s).map(normPos).includes(r.p)));
+  /* Was die anderen brauchen */
+  const slotName = s => { const rid = d.slot_to_roster_id && d.slot_to_roster_id[s]; const t = rid && S.teamByRid[rid]; return t ? t.name : ''; };
+  const core = S.leaguePos.filter(p => ['QB','RB','WR','TE'].includes(p));
+  const needOf = p => S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === p; }).length;
+  const cnt = {}; picks.forEach(p => { const s = slotOfPick(p), pos = normPos((p.metadata && p.metadata.position) || pos1(p.player_id)); (cnt[s] = cnt[s] || {})[pos] = (cnt[s][pos] || 0) + 1; });
+  const spent = {}; if (auc) picks.forEach(p => { const s = slotOfPick(p); spent[s] = (spent[s] || 0) + (+(p.metadata && p.metadata.amount) || 0); });
+  const between = !auc && target ? Array.from({length:Math.max(0, target.no - cur)}, (_, k) => dhSlotOf(cur + k, I)) : [];
+  const recent = picks.slice(-8).reverse();
+  return `
+  ${head('Live-Draft', `${dhType()} · ${dhTypeLbl(I.type)} · ${I.T} Teams · ${I.R} Runden`, undefined, 'Diese Ansicht ist für ein zweites Fenster neben Sleeper gedacht. Sie fragt alle paar Sekunden die neuen Picks ab, gezogene Spieler verschwinden. Ist das Fenster im Hintergrund, bremst der Browser die Abfrage. Beim Zurückwechseln aktualisiert sie sofort. Im Tab-Titel steht, wann du dran bist. Gewählt wird in Sleeper, hier wird nur beraten.')}
+  ${form}
+  <div class="filters"><span class="muted small">Dein Draftplatz</span><select class="sel" id="dlSlot" aria-label="Draftplatz">${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<option value="${s}" ${s === mySlot ? 'selected' : ''}>Platz ${s}${slotName(s) ? ' · ' + esc(slotName(s)) : ''}</option>`).join('')}${mySlot ? '' : '<option selected disabled>bitte wählen</option>'}</select><span class="small muted" id="dlAt">aktualisiert ${new Date(L.at).toLocaleTimeString('de-DE')}</span>${dhOpenWin()}</div>
+  ${status}
+  <div class="dl-grid">
+    <div class="dl-main">
+      <section class="panel"><div class="panel-head"><h3>${onClock ? 'Jetzt wählen' : 'Für deinen nächsten Pick'}</h3>${qm('Reihenfolge: Draft-Wert (Sleeper-Projektion minus Ersatzniveau), gewichtet nach dem, was deinem Kader noch fehlt. Kicker und Defense erst in den letzten zwei Runden. Deine Markierungen aus dem Draft-Board zählen mit. Die Prozente schätzen aus dem ADP, ob der Spieler an deinem Pick noch verfügbar ist. Unter 30 % heißt: Willst du ihn, musst du jetzt zugreifen.')}</div>
+        ${recHtml || '<p class="muted">Keine Spieler mehr verfügbar.</p>'}</section>
+      <section class="panel"><div class="panel-head"><h3>Beste freie Spieler</h3></div>
+        <div class="filters">${['ALL', ...S.leaguePos].map(p => `<button class="seg" data-lpos="${p}" aria-pressed="${lpos === p}">${p === 'ALL' ? 'Alle' : p}</button>`).join('')}</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Spieler</th><th>Position</th><th class="n">Draft-Wert</th><th class="n">ADP</th>${auc ? '<th class="n">Auktionswert</th>' : target ? `<th class="n">an Pick ${target.no}</th>` : ''}</tr></thead><tbody>
+        ${board.map(x => { const p = pA(x); return `<tr class="${mk[x.pid] === 1 ? 'dh-goal' : mk[x.pid] === -1 ? 'dh-avoid' : ''}"><td>${playerCell(x.pid, dhChips(x))}</td><td><b>${dhPosLbl(x)}</b>${x.tier ? `<div class="pmeta">Stufe ${x.tier}</div>` : ''}</td><td class="n" style="font-weight:700">${sgn(x.vor)}</td><td class="n">${x.adp ? f1(x.adp) : '–'}</td>${auc ? `<td class="n">$${x.usd}</td>` : target ? `<td class="n">${p != null ? `<span class="${p >= .6 ? 'good' : p < .3 ? 'bad' : ''}">${f0(p * 100)} %</span>` : '–'}</td>` : ''}</tr>`; }).join('')}
+        </tbody></table></div></section>
+    </div>
+    <div class="dl-side">
+      <section class="panel"><div class="panel-head"><h3>Dein Kader</h3><p>${minePicks.length} von ${I.R} Picks${auc && mySlot ? ` · noch $${I.budget - (spent[mySlot] || 0)}` : ''}</p></div>
+        ${myRows.map(r => { const n = needOf(r.p); return `<div class="dl-pos"><span class="dl-pl">${posChip(r.p)}<small>${r.ps.length}${n ? ' / ' + n : ''}</small></span><span>${r.ps.length ? r.ps.map(p => `<span class="tlink" data-player="${esc(p.player_id)}">${esc(pname(p.player_id))}</span>`).join(', ') : `<span class="${r.ps.length < n ? 'bad' : 'muted'} small">${n ? 'noch offen' : '–'}</span>`}</span></div>`; }).join('')}</section>
+      ${between.length ? `<section class="panel"><div class="panel-head"><h3>Bis zu deinem Pick wählen noch</h3>${qm('Was diese Teams auf den Kernpositionen schon haben. Fehlt vielen dieselbe Position, wird sie vermutlich weggezogen, bevor du dran bist.')}</div>
+        ${[...new Set(between)].map(s => `<div class="dl-team"><span>${esc(slotName(s) || 'Platz ' + s)}</span><span>${core.map(p => { const c = (cnt[s] || {})[p] || 0, n = needOf(p); return `<span class="dl-need ${c < n ? 'open' : ''}" title="${c} ${p}${n ? ', Startplätze: ' + n : ''}">${p} ${c}</span>`; }).join('')}</span></div>`).join('')}
+        ${(() => { const miss = core.map(p => ({p, n:[...new Set(between)].filter(s => ((cnt[s] || {})[p] || 0) < needOf(p)).length})).filter(x => x.n).sort((a,b) => b.n - a.n)[0]; return miss ? `<p class="small muted">${miss.n} ${miss.n === 1 ? 'Team braucht' : 'Teams brauchen'} noch einen ${miss.p} für die Startelf.</p>` : ''; })()}</section>` : ''}
+      ${auc ? `<section class="panel"><div class="panel-head"><h3>Budgets</h3></div>${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<div class="dl-team"><span>${esc(slotName(s) || 'Platz ' + s)}</span><b>$${I.budget - (spent[s] || 0)}</b></div>`).join('')}</section>` : ''}
+      <section class="panel"><div class="panel-head"><h3>Letzte Picks</h3></div>
+        ${recent.length ? recent.map(p => { const x = C.by[p.player_id], amt = auc && p.metadata && p.metadata.amount; const tag = x && x.adp && !auc ? (p.pick_no - x.adp >= Math.max(8, .3 * x.adp) ? '<span class="chip good mchip">spät geholt</span>' : x.adp - p.pick_no >= Math.max(8, .3 * x.adp) ? '<span class="chip warn mchip">früh geholt</span>' : '') : amt && x ? (+amt > x.usd * 1.3 ? '<span class="chip warn mchip">teuer</span>' : +amt < x.usd * .7 ? '<span class="chip good mchip">günstig</span>' : '') : '';
+          return `<div class="dl-pick ${slotOfPick(p) === mySlot ? 'mine' : ''}"><span class="muted small">${auc ? '$' + (amt || '?') : `${p.round}.${String(p.pick_no - (p.round - 1) * I.T).padStart(2, '0')}`}</span><span><span class="tlink" data-player="${esc(p.player_id)}">${esc(pname(p.player_id))}</span> ${posChip(normPos((p.metadata && p.metadata.position) || pos1(p.player_id)))}${p.is_keeper ? ' <span class="chip plain mchip">Keeper</span>' : ''}${tag}<div class="pmeta">${esc(slotName(slotOfPick(p)) || 'Platz ' + slotOfPick(p))}</div></span></div>`; }).join('') : '<p class="muted small">Noch keine Picks.</p>'}</section>
+    </div>
+  </div>`;
+};
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('[data-dmark]');
+  if (m){ const [pid, v] = m.dataset.dmark.split(':'); dhSetMark(pid, +v); renderView(); return; }
+  const w = e.target.closest && e.target.closest('[data-dhwin]');
+  if (w){ const u = new URL(location.href); u.searchParams.set('league', S.league.league_id); u.searchParams.set('view', 'dlive'); window.open(u.toString(), 'sh-live-draft', 'popup=yes,width=980,height=1100'); }
+});
 
 /* ---------- Team-Bausteine: werden von Team-Karte und Cockpit gemeinsam genutzt ---------- */
 function teamParts(rid){
@@ -2288,7 +2701,7 @@ function playerCardHtml(pid){
   const ngs = X && X.ngs ? Object.entries(X.ngs).filter(([k]) => NGS_LBL[k]).map(([k, v]) => `<div class="tc-row"><span>${NGS_LBL[k][0]}</span><span><b>${f1(v)}${NGS_LBL[k][1]}</b></span></div>`).join('') : '';
   const T = S.nxT, H = S.nxH, gs = gsisOf(pid);
   const tmap = ['WR','TE','RB'].includes(pos) && X ? (T ? targetMap(T.t[gs]) + (pos === 'RB' ? runLanes(T.c[gs]) : '') : '<div class="loading small"><div class="spin"></div>Zielkarte wird geladen …</div>') : '';
-  const hist = H && gs ? Object.keys(H).map(Number).sort((a,b) => b - a).map(y => ({y, r:H[y][gs]})).filter(x => x.r) : [];
+  const hist = H && gs ? Object.keys(H).map(Number).sort((a,b) => b - a).filter(y => y < +S.league.season).map(y => ({y, r:H[y][gs]})).filter(x => x.r) : [];
   const rv = (S.league.scoring_settings || {}).rec ?? 0;
   const histHtml = !S.nx ? '' : H ? (hist.length ? `<div class="tbl-wrap"><table data-nosort><thead><tr><th>Saison</th><th>Team</th><th class="n">Spiele</th><th class="n">Punkte</th><th class="n">Ø</th><th class="n">Rang</th></tr></thead><tbody>${hist.map(x => { const pts = x.r.std + rv * x.r.rec; return `<tr><td>${x.y}</td><td>${esc(x.r.t)}</td><td class="n">${x.r.g}</td><td class="n">${f1(pts)}</td><td class="n">${f1(pts / Math.max(1, x.r.g))}</td><td class="n">${x.r.p}${x.r.rk ? (rv >= .75 ? x.r.rk.ppr : x.r.rk.std) : ''}</td></tr>`; }).join('')}</tbody></table></div><p class="small muted">Punkte in eurem Scoring. Rang innerhalb der Position.</p>` : '<p class="small muted">Keine Einsätze in den letzten drei Saisons.</p>') : '<div class="loading small"><div class="spin"></div>Vorsaisons werden geladen …</div>';
   const box = (t, h) => h ? `<section class="tc-box"><h4>${t}</h4>${h}</section>` : '';
@@ -3876,6 +4289,9 @@ const MORE = [
   ['spieltag','Spieltag','Alle Spiele der Woche mit Siegchance'],
   ['gegner','Gegner-Check','Dein Kader gegen die Defenses der Woche'],
   ['defense','Defensiv-Profile','Alle 32 Defenses nach Position'],
+  ['dprep','Draft-Board','Spieler nach Draft-Wert, Stufen, Schnäppchen'],
+  ['dplan','Draft-Plan','Wer an deinen Picks vermutlich noch da ist'],
+  ['dlive','Live-Draft','Empfehlungen während des Drafts'],
   ['team','Team-Analyse','Saisonverlauf, Positionen, Punktequellen'],
   ['trades','Trade-Vorschläge','Faire Deals und eigener Trade-Rechner'],
   ['mydraft','Meine Draft-Bilanz','Deine Picks, Steals und Busts'],
