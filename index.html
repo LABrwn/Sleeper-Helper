@@ -467,7 +467,34 @@ td.tx-st{background:rgba(61,123,255,.18);font-weight:600}
 .sp-match.mine{border-color:var(--mine);box-shadow:0 0 0 1px var(--mine),var(--lift)}
 .sp-match .ck-stage{height:clamp(220px,19vw,290px)}
 [data-device="mobile"] .sp-match .ck-stage{height:250px}
+.ck-los{position:absolute;top:0;bottom:0;width:2px;transform:translateX(-50%);background:linear-gradient(180deg,rgba(255,214,102,0),rgba(255,214,102,.55) 25%,rgba(255,214,102,.55) 55%,rgba(255,214,102,0));pointer-events:none}
+.ck-ball i{width:38px;height:23px;box-shadow:0 0 0 2px rgba(255,255,255,.3),0 0 26px 8px rgba(255,190,120,.45),0 4px 10px rgba(0,0,0,.6)}
+.ck-ball i::after{left:11px;right:11px;top:10px}
+.ck-ball b{top:27px;font-size:.92rem;padding:2px 10px;background:rgba(13,18,32,.88);box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.ck-trail{height:4px}
+.ck-got b{color:#fff;font-weight:700}
+/* Spieltag: flache Bühne, Avatar und Name nebeneinander */
+html:not([data-device="mobile"]) .sp-match .ck-stage{height:clamp(150px,11vw,176px)}
+html:not([data-device="mobile"]) .sp-match .ck-ball,html:not([data-device="mobile"]) .sp-match .ck-trail{top:31%}
+html:not([data-device="mobile"]) .sp-match .ck-top{top:10px;font-size:.62rem;padding:3px 10px}
+html:not([data-device="mobile"]) .sp-match .ck-vs{padding:0 clamp(14px,5%,56px) 12px;align-items:center}
+html:not([data-device="mobile"]) .sp-match .ck-side{grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:0;align-items:center}
+html:not([data-device="mobile"]) .sp-match .ck-side .av{grid-row:span 2}
+html:not([data-device="mobile"]) .sp-match .ck-side.r{grid-template-columns:minmax(0,1fr) auto}
+html:not([data-device="mobile"]) .sp-match .ck-side.r .av{grid-column:2;grid-row:1 / span 2}
+html:not([data-device="mobile"]) .sp-match .ck-side.r .ck-tn,html:not([data-device="mobile"]) .sp-match .ck-side.r .ck-sub{grid-column:1}
+html:not([data-device="mobile"]) .sp-match .av.xl{width:50px;height:50px;font-size:1rem}
+html:not([data-device="mobile"]) .sp-match .ck-tn{font-size:1.05rem}
+html:not([data-device="mobile"]) .sp-match .ck-score{font-size:clamp(1.9rem,2.6vw,2.5rem)}
 .sp-match .ck-ez{display:none}
+.sp-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sp-strip>div{padding-top:8px;padding-bottom:8px}
+[data-device="mobile"] .sp-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+[data-device="mobile"] .sp-strip>div{padding:8px 10px}
+[data-device="mobile"] .sp-strip .l{font-size:.56rem;letter-spacing:.04em}
+[data-device="mobile"] .sp-strip .v{font-size:.92rem;white-space:nowrap}
+[data-device="mobile"] .sp-match .ck-stage{height:230px}
+[data-device="mobile"] .sp-match .ck-ball,[data-device="mobile"] .sp-match .ck-trail{top:24%}
 .sp-strip{border-top:1px solid var(--line);border-bottom:0}
 .ck-stage.compact{height:200px}
 .ck-stage.compact .ck-score{font-size:2rem}
@@ -851,7 +878,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15d</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15e</span></footer>
 
 <script>
 "use strict";
@@ -3020,18 +3047,19 @@ function matchStage(P, o = {}){
   const A = S.teamByRid[P.a], B = S.teamByRid[P.b], TA = S.C.team[P.a], TB = S.C.team[P.b];
   const rec = X => X ? `${X.w}–${X.l}${X.t ? '–' + X.t : ''}` : '';
   const win = P.win, bx = 8.3 + 83.4 * Math.max(.02, Math.min(.98, win));
-  const sa = P.done ? P.pa : P.live ? P.la : P.pa, sb = P.done ? P.pb : P.live ? P.lb : P.pb;
+  const sa = P.pa, sb = P.pb;
   const lbl = P.done ? (win === 1 ? 'Sieg' : win === 0 ? 'Niederlage' : 'Remis') : `${f0(win * 100)} %`;
   const eb = o.eyebrow || `Woche ${P.w} · ${P.done ? 'Endstand' : P.live ? 'Spiel läuft' : 'nächstes Spiel'}`;
-  const sub = P.done ? 'Endstand' : P.live ? `live · erwartet ${f1(P.pa)} : ${f1(P.pb)}` : 'erwartete Punkte';
+  const sub = P.done ? 'Endstand' : `erwartet · bisher erzielt <b>${f1(P.la)} : ${f1(P.lb)}</b>${P.live ? ' · läuft' : ''}`;
   return `<div class="ck-stage ${o.compact ? 'compact' : ''}">${fieldStage()}
     <span class="ck-ez l">${esc(ezName(A.name))}</span><span class="ck-ez r">${esc(ezName(B.name))}</span>
     <span class="ck-trail ${win >= .5 ? 'good' : 'bad'}" style="left:${Math.min(50, bx)}%;width:${Math.abs(bx - 50)}%"></span>
+    <span class="ck-los" style="left:${bx}%"></span>
     <span class="ck-ball" style="left:${bx}%" title="${P.done ? lbl : 'Siegchance ' + lbl}"><i></i><b class="${win >= .5 ? 'good' : 'bad'}">${lbl}</b></span>
     <div class="ck-eyebrow ck-top">${esc(eb)}</div>
     <div class="ck-vs">
       <div class="ck-side">${avatar(A.avatar, A.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.a}">${esc(A.name)}</span></div><div class="ck-sub">${esc(rec(TA))}${o.place ? ' · Platz ' + o.place : ''}</div></div>
-      <div class="ck-mid"><div class="ck-score"><span class="${sa >= sb ? 'lead' : ''}">${f1(sa)}</span><em>:</em><span class="${sb > sa ? 'lead' : ''}">${f1(sb)}</span></div><div class="ck-sub">${sub}</div></div>
+      <div class="ck-mid"><div class="ck-score"><span class="${sa >= sb ? 'lead' : ''}">${f1(sa)}</span><em>:</em><span class="${sb > sa ? 'lead' : ''}">${f1(sb)}</span></div><div class="ck-sub ck-got">${sub}</div></div>
       <div class="ck-side r">${avatar(B.avatar, B.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.b}">${esc(B.name)}</span></div><div class="ck-sub">${esc(rec(TB))} · ${esc(B.manager)}</div></div>
     </div></div>`;
 }
@@ -3066,7 +3094,6 @@ VIEWS.spieltag = () => {
     const ta = C.team[P.a], tb = C.team[P.b];
     const kicks = P.done ? [] : [P.a, P.b].flatMap(r => { const m = ms.find(x => x.roster_id === r); return (m && m.starters || []).filter(x => x && x !== '0').map(pid => kickoff(nflGame(nflTeam(pid), w))); }).filter(k => k && k.getTime() > Date.now()).sort((x, y) => x - y);
     return `<div class="ck-strip sp-strip">
-      <div><span class="l">${P.done ? 'Ergebnis' : 'Siegchance'}</span><span class="v ${P.win >= .5 ? 'good' : 'bad'}">${P.done ? (P.win === 1 ? 'Sieg' : P.win === 0 ? 'Niederlage' : 'Remis') : f0(P.win * 100) + ' : ' + f0((1 - P.win) * 100)}</span></div>
       <div><span class="l">${P.done ? 'Abstand' : 'Erwarteter Abstand'}</span><span class="v">${sgn(P.pa - P.pb)}</span></div>
       <div><span class="l">Ø Punkte</span><span class="v">${ta ? f1(ta.avg) : '–'} : ${tb ? f1(tb.avg) : '–'}</span></div>
       <div><span class="l">${P.done ? 'Woche' : 'Nächster Anstoß'}</span><span class="v">${P.done ? 'beendet' : kicks.length ? esc(fmtKick(kicks[0])) : 'alle Spiele laufen'}</span></div>
