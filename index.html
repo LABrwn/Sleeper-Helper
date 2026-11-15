@@ -479,9 +479,9 @@ html:not([data-device="mobile"]) .sp-match .ck-ball,html:not([data-device="mobil
 html:not([data-device="mobile"]) .sp-match .ck-top{top:10px;font-size:.62rem;padding:3px 10px}
 html:not([data-device="mobile"]) .sp-match .ck-vs{padding:0 clamp(14px,5%,56px) 12px;align-items:center}
 html:not([data-device="mobile"]) .sp-match .ck-side{grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:0;align-items:center}
-html:not([data-device="mobile"]) .sp-match .ck-side .av{grid-row:span 2}
+html:not([data-device="mobile"]) .sp-match .ck-side .av{grid-row:span 1}
 html:not([data-device="mobile"]) .sp-match .ck-side.r{grid-template-columns:minmax(0,1fr) auto}
-html:not([data-device="mobile"]) .sp-match .ck-side.r .av{grid-column:2;grid-row:1 / span 2}
+html:not([data-device="mobile"]) .sp-match .ck-side.r .av{grid-column:2;grid-row:1}
 html:not([data-device="mobile"]) .sp-match .ck-side.r .ck-tn,html:not([data-device="mobile"]) .sp-match .ck-side.r .ck-sub{grid-column:1}
 html:not([data-device="mobile"]) .sp-match .av.xl{width:50px;height:50px;font-size:1rem}
 html:not([data-device="mobile"]) .sp-match .ck-tn{font-size:1.05rem}
@@ -490,8 +490,10 @@ html:not([data-device="mobile"]) .sp-match .ck-score{font-size:clamp(1.9rem,2.6v
 .sp-strip{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-top:1px solid var(--line);padding:8px 20px}
 .sp-strip>div{display:grid;gap:1px}
 .sp-strip .c{text-align:center;padding:0 24px}
+.sp-strip .l span{white-space:nowrap}
 .sp-strip .r{text-align:right}
-.sp-strip .l{font-size:.64rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.sp-strip .l{font-size:.7rem;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+.sp-strip .c .l{text-transform:uppercase;letter-spacing:.08em;font-size:.64rem;color:var(--faint)}
 .sp-strip .v{font-family:var(--f-display);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums}
 .sp-strip .c .v{font-size:1.2rem}
 [data-device="mobile"] .sp-strip{padding:8px 12px}
@@ -883,7 +885,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15f</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15h</span></footer>
 
 <script>
 "use strict";
@@ -2222,11 +2224,18 @@ function dhCalc(){
     arr.forEach((x, i) => { x.prk = i + 1; if (i && i < 50 && arr[i - 1].pts - x.pts > Math.max(.04 * arr[0].pts, 2.2 * med, 3)) tier++; x.tier = i < 50 ? tier : null; });
   }
   const byV = [...list].sort((a,b) => b.vor - a.vor); byV.forEach((x, i) => x.vrk = i + 1);
+  /* Waiver-Niveau: Wie viele Spieler je Position werden insgesamt gedraftet (laut ADP, sonst nach Wert)? Der beste danach ist das, was man später umsonst bekommt. */
+  const N = I.T * I.R, withAdp = list.filter(x => x.adp).length >= N * .8;
+  const drafted = (withAdp ? [...list].filter(x => x.adp).sort((a,b) => a.adp - b.adp) : byV).slice(0, N);
+  const nPos = {}; drafted.forEach(x => nPos[x.pos] = (nPos[x.pos] || 0) + 1);
+  const wrepl = {};
+  for (const [p, arr] of Object.entries(byPos)){ const k = Math.min(arr.length - 1, nPos[p] || 0); wrepl[p] = arr[k] ? arr[k].pts : 0; }
+  list.forEach(x => x.wv = x.pts - wrepl[x.pos]);
   if (I.type === 'auction'){
     const N = I.T * I.R, pos = byV.slice(0, N).filter(x => x.vor > 0), tot = sum(pos.map(x => x.vor)), pool = Math.max(0, I.T * I.budget - N);
     byV.forEach(x => x.usd = x.vor > 0 && tot ? Math.max(1, Math.round(1 + x.vor / tot * pool)) : 1);
   }
-  return S.dh.calc = {list:byV, by:Object.fromEntries(byV.map(x => [x.pid, x])), repl, I};
+  return S.dh.calc = {list:byV, by:Object.fromEntries(byV.map(x => [x.pid, x])), repl, wrepl, I};
 }
 /* Höchstens drei Hinweise neben der Zahl: Wert gegenüber ADP, Spiele pro Saison, Trend. Dazu Rookie und (Dynasty/Keeper) Alter. */
 function dhHints(x){
@@ -2273,27 +2282,34 @@ function dhAvail(x, n, now){
 const dhDed = pos => S.slots.filter(s => { const e = elig(s).map(normPos); return e.length === 1 && e[0] === pos; }).length;
 function dhRank(avail, mine, left, mk){
   const C = dhCalc(), sf = dhSuperflex();
-  const v0 = pid => Math.max(0, (C.by[pid] || {}).vor || 0), posOf = pid => (C.by[pid] || {}).pos || normPos(pos1(pid));
+  const v0 = pid => Math.max(0, (C.by[pid] || {}).wv || 0), posOf = pid => (C.by[pid] || {}).pos || normPos(pos1(pid));
   const mineC = mine.map(pid => ({pid, pts:v0(pid)}));
   const base = optimalLineup(mineC);
   const have = {}, bench = {};
   mine.forEach(pid => { const p = posOf(pid); have[p] = (have[p] || 0) + 1; if (!base.set.has(pid)) bench[p] = (bench[p] || 0) + 1; });
+  /* Noch unbesetzte Startplätze (ohne Kicker/Defense) und Kicker/Defense getrennt zählen */
+  const emptyCore = base.lineup.filter(l => !l.pid && !elig(l.slot).map(normPos).every(p => ['K','DEF'].includes(p))).length;
   const kd = ['K','DEF'].filter(p => S.leaguePos.includes(p));
   const missKD = kd.reduce((a, p) => a + Math.max(0, dhDed(p) - (have[p] || 0)), 0);
   return avail.map(x => {
     if (mk[x.pid] === -1) return null;
     if (kd.includes(x.pos)){
       if (left > 3 || (have[x.pos] || 0) >= dhDed(x.pos)) return null;
-      return {x, s:(left <= missKD ? 1e6 : 0) + Math.max(0, x.vor) + 1, gain:Math.max(0, x.vor), start:true};
+      return {x, s:(left <= missKD ? 1e6 : 0) + Math.max(0, x.wv) + 1, gain:Math.max(0, x.wv), start:true};
     }
     if (left <= missKD) return null;   // die letzten Picks gehören Kicker und Defense
-    const gain = optimalLineup([...mineC, {pid:x.pid, pts:Math.max(0, x.vor)}]).total - base.total;
-    let bf = [.35, .25, .15, .08][Math.min(bench[x.pos] || 0, 3)];
-    if (x.pos === 'QB' && !sf) bf = (have.QB || 0) >= 2 ? 0 : .12;
-    if (x.pos === 'TE') bf = (have.TE || 0) >= 2 ? 0 : .12;
-    let sc = gain + bf * Math.max(0, x.vor) + x.vor * .001;
+    const gain = optimalLineup([...mineC, {pid:x.pid, pts:Math.max(0, x.wv)}]).total - base.total;
+    const fills = optimalLineup([...mineC, {pid:x.pid, pts:Math.max(.01, x.wv)}]).lineup.filter(l => !l.pid).length < base.lineup.filter(l => !l.pid).length;
+    /* Bank: sinkender Wert je weiterem Backup, mit Obergrenze je Position */
+    const nb = bench[x.pos] || 0, cap = {QB:1, TE:1, RB:4, WR:4}[x.pos] ?? 2;
+    let bf = nb >= cap ? 0 : [.4, .3, .18, .1][Math.min(nb, 3)];
+    if (x.pos === 'QB') bf = nb >= 1 ? 0 : sf ? .3 : .12;
+    if (x.pos === 'TE' && nb < 1) bf = .15;
+    let sc = gain + bf * Math.max(0, x.wv) + x.wv * .001;
+    /* Wird es knapp mit den Picks, gehen offene Startplätze vor */
+    if (fills && left - missKD <= emptyCore + 1) sc += 1e5;
     if (mk[x.pid] === 1) sc = sc * 1.1 + 1;
-    return {x, s:sc, gain, start:gain > .5};
+    return {x, s:sc, gain, start:gain > .5 || fills};
   }).filter(Boolean).sort((a,b) => b.s - a.s);
 }
 const dhPosLbl = x => `${x.pos}${x.prk}`;
@@ -2320,7 +2336,7 @@ VIEWS.dprep = () => {
     ${kpi(String(steals), 'Schnäppchen', 'unter den draftbaren Spielern')}
   </div>
   <section class="panel"><div class="panel-head"><h3>Wo die Positionen wegbrechen</h3>${qm('Projizierte Saisonpunkte nach Positionsrang. Ein steiler Abfall heißt: Danach kommt deutlich weniger, die Position also eher früh besetzen. Ein flacher Verlauf heißt: Hier kann man warten. Die Punkte markieren den Beginn einer neuen Stufe.')}</div>${dhCliffs(C)}</section>
-  <section class="panel"><div class="panel-head"><h3>Alle Spieler</h3>${dhOpenWin()}</div>
+  <section class="panel"><div class="panel-head"><h3>Alle Spieler</h3></div>
     <div class="filters">${['ALL', ...S.leaguePos].map(p => `<button class="seg" data-dpos="${p}" aria-pressed="${S.dh.pos === p}">${p === 'ALL' ? 'Alle' : p}</button>`).join('')}
       <input class="sel" id="dhQ" type="search" placeholder="Spieler suchen" value="${esc(S.dh.q)}" aria-label="Spieler suchen" style="min-width:12em">
       <label class="small muted"><input type="checkbox" id="dhOnly" ${S.dh.only ? 'checked' : ''}> nur markierte</label></div>
@@ -2371,7 +2387,6 @@ VIEWS.dplan = () => {
     taken.push(best.x.pid);
     plan.push({pk, best, alt:cands.slice(1, 4)});
   }
-  const evalHtml = dhPlanCheck(plan.map(p => p.best.x.pid), slot, mine);
   const startPts = (() => { const sel = plan.map(p => ({pid:p.best.x.pid, pts:p.best.x.pts})); return optimalLineup(sel).total; })();
   const shape = plan.slice(0, 6).map(p => p.best.x.pos).join(' · ');
   const pch = (x, p) => `<span class="dh-c">${posChip(x.pos)} <span class="tlink" data-player="${esc(x.pid)}">${esc(pname(x.pid))}</span>${p != null ? ` <span class="muted small">${f0(p * 100)} %</span>` : ''}</span>`;
@@ -2383,50 +2398,11 @@ VIEWS.dplan = () => {
     ${kpi(f0(startPts), 'Projizierte Startelf', 'Saisonpunkte der besten Aufstellung aus dem Plan')}
     ${kpi(`Pick ${picks[0].no} und ${picks[1] ? picks[1].no : '–'}`, 'Deine ersten Picks', picks[1] ? `${picks[1].no - picks[0].no - 1} Picks dazwischen` : '')}
   </div>
-  <section class="panel"><div class="panel-head"><h3>Runde für Runde</h3>${dhOpenWin()}</div>
+  <section class="panel"><div class="panel-head"><h3>Runde für Runde</h3></div>
     <div class="tbl-wrap"><table data-nosort><thead><tr><th>Runde</th><th class="n">Pick</th><th>Plan</th><th class="n">Draft-Wert</th><th>Alternativen (Chance, dass er noch da ist)</th></tr></thead><tbody>
     ${plan.map(p => `<tr><td>${p.pk.r}</td><td class="n">${p.pk.no}</td><td>${pch(p.best.x, p.best.p)}${dhChips(p.best.x)}<div class="pmeta">${dhPosLbl(p.best.x)}${p.best.x.tier ? ' · Stufe ' + p.best.x.tier : ''}</div></td><td class="n">${sgn(p.best.x.vor)}<div class="pmeta">${p.best.start ? 'Startelf' : 'Bank'}</div></td><td class="small">${p.alt.map(a => pch(a.x, a.p)).join('')}</td></tr>`).join('')}
-    </tbody></table></div></section>
-  ${evalHtml}`;
+    </tbody></table></div></section>`;
 };
-/* Wie wäre der Plan in der laufenden Saison gelaufen? Kader = Plan, Woche für Woche die echten Punkte der Spieler.
-   Aufstellung: die optimale der Woche, mal deiner bisherigen Coaching-Quote. Gegner und ihre Punkte wie tatsächlich. */
-function dhPlanCheck(pids, slot, mine){
-  const C = S.C, me = S.myRid, T = C && C.team[me];
-  if (!C || !C.weeks.length || !T) return '';
-  if (String(S.league.season) !== String(S.dh.projSeason || S.league.season)) return '';
-  const eff = T.eff && isFinite(T.eff) ? T.eff : .85;
-  const rows = C.weeks.map(w => {
-    const c = pids.map(pid => { const v = weekPts(pid, w); return {pid, pts:v != null && didPlay(w, pid, v) ? v : 0}; });
-    const opt = optimalLineup(c).total, plan = opt * eff, act = C.scores[w][me], o = C.opp[w][me], op = o != null ? C.scores[w][o] : null;
-    return {w, opt, plan, act, op, o};
-  });
-  /* Tabelle neu rechnen: eigene Punkte durch den Plan ersetzt, Gegner behalten ihre echten Punkte */
-  const rids = S.teams.map(t => t.rid);
-  const table = useMe => { const acc = {}; rids.forEach(r => acc[r] = {w:0, l:0, t:0, pf:0});
-    for (const [i, w] of C.weeks.entries()){ const sc = {...C.scores[w]}; if (useMe) sc[me] = rows[i].plan;
-      for (const r of rids){ const a = sc[r]; if (a == null) continue; const o = C.opp[w][r], b = o != null ? sc[o] : null; acc[r].pf += a; if (b == null) continue; if (a > b) acc[r].w++; else if (a < b) acc[r].l++; else acc[r].t++; } }
-    const order = [...rids].sort((a,b) => (acc[b].w + acc[b].t / 2) - (acc[a].w + acc[a].t / 2) || acc[b].pf - acc[a].pf);
-    return {acc, place:order.indexOf(me) + 1}; };
-  const real = table(false), alt = table(true), ra = real.acc[me], pa = alt.acc[me];
-  const rec = a => `${a.w}–${a.l}${a.t ? '–' + a.t : ''}`;
-  const sumP = sum(rows.map(r => r.plan)), sumA = sum(rows.map(r => r.act || 0)), sumO = sum(rows.map(r => r.opt));
-  const lg = avg(S.teams.map(t => C.team[t.rid].avg));
-  const used = pids.filter(pid => S.teamByRid[me].roster.players && S.teamByRid[me].roster.players.includes(pid)).length;
-  return `<section class="panel"><div class="panel-head"><h3>So wäre der Plan in dieser Saison gelaufen</h3>${qm(`Kader = die ${pids.length} Spieler aus dem Plan, ohne Waiver und Trades. Für jede bisherige Woche zählen ihre echten Punkte in eurem Scoring. Aufgestellt wird die beste Startelf der Woche, multipliziert mit deiner bisherigen Coaching-Quote (${pct(eff)}), weil niemand jede Woche perfekt aufstellt. Die Gegner behalten ihre tatsächlichen Punkte, daraus ergeben sich Bilanz und Tabellenplatz. Vorsicht: Die Sleeper-Projektionen, auf denen der Plan beruht, kennen den bisherigen Saisonverlauf schon. Der Plan ist also etwas klüger, als er vor dem Draft hätte sein können.`)}</div>
-    <div class="kpis">
-      ${kpi(rec(pa), 'Bilanz mit dem Plan', `tatsächlich ${rec(ra)}`, pa.w > ra.w ? 'good' : pa.w < ra.w ? 'bad' : '')}
-      ${kpi(`Platz ${alt.place}`, 'Tabelle mit dem Plan', `tatsächlich Platz ${real.place}`, alt.place < real.place ? 'good' : alt.place > real.place ? 'bad' : '')}
-      ${kpi(f1(sumP / rows.length), 'Punkte pro Woche', `tatsächlich ${f1(sumA / rows.length)} · Liga ${f1(lg)}`, sumP > sumA ? 'good' : 'bad')}
-      ${kpi(sgn(sumP - sumA), 'Punkte insgesamt', `${f0(sumP)} statt ${f0(sumA)} · optimal aufgestellt ${f0(sumO)}`)}
-    </div>
-    <div class="tbl-wrap"><table data-nosort><thead><tr><th>Woche</th><th class="n">Plan</th><th class="n">Tatsächlich</th><th class="n">Gegner</th><th>Mit dem Plan</th><th>Tatsächlich</th></tr></thead><tbody>
-    ${rows.map(r => { const res = (a, b) => b == null ? '–' : a > b ? '<span class="chip good">Sieg</span>' : a < b ? '<span class="chip bad">Niederlage</span>' : '<span class="chip plain">Remis</span>';
-      return `<tr><td>W${r.w}</td><td class="n" style="font-weight:700">${f1(r.plan)}</td><td class="n">${f1(r.act)}</td><td class="n">${f1(r.op)}${r.o != null ? `<div class="pmeta">${esc(S.teamByRid[r.o].name)}</div>` : ''}</td><td>${res(r.plan, r.op)}</td><td>${res(r.act, r.op)}</td></tr>`; }).join('')}
-    </tbody></table></div>
-    <p class="small muted">${used} der ${pids.length} Plan-Spieler stehen heute auch in deinem Kader.${S.statsOK ? '' : ' Ohne Wochen-Stats von Sleeper fehlen Punkte für Spieler, die bei niemandem im Kader stehen.'}</p></section>`;
-}
-
 /* ---------- Ansicht Live-Draft: verbindet sich mit dem Sleeper-Draft, für ein zweites Fenster neben Sleeper ---------- */
 function dhDraftId(){ try { return S.dh.over || localStorage.getItem('sh-draft-' + S.league.league_id) || S.league.draft_id; } catch(e){ return S.league.draft_id; } }
 async function dhPoll(force){
@@ -2522,7 +2498,7 @@ VIEWS.dlive = () => {
   return `
   ${head('Live-Draft', `${dhType()} · ${dhTypeLbl(I.type)} · ${I.T} Teams · ${I.R} Runden`, undefined, 'Diese Ansicht ist für ein zweites Fenster neben Sleeper gedacht. Sie fragt alle paar Sekunden die neuen Picks ab, gezogene Spieler verschwinden. Ist das Fenster im Hintergrund, bremst der Browser die Abfrage. Beim Zurückwechseln aktualisiert sie sofort. Im Tab-Titel steht, wann du dran bist. Gewählt wird in Sleeper, hier wird nur beraten.')}
   ${form}
-  <div class="filters"><span class="muted small">Dein Draftplatz</span><select class="sel" id="dlSlot" aria-label="Draftplatz">${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<option value="${s}" ${s === mySlot ? 'selected' : ''}>Platz ${s}${slotName(s) ? ' · ' + esc(slotName(s)) : ''}</option>`).join('')}${mySlot ? '' : '<option selected disabled>bitte wählen</option>'}</select><span class="small muted" id="dlAt">aktualisiert ${new Date(L.at).toLocaleTimeString('de-DE')}</span>${dhOpenWin()}</div>
+  <div class="filters"><span class="muted small">Dein Draftplatz</span><select class="sel" id="dlSlot" aria-label="Draftplatz">${Array.from({length:I.T}, (_, i) => i + 1).map(s => `<option value="${s}" ${s === mySlot ? 'selected' : ''}>Platz ${s}${slotName(s) ? ' · ' + esc(slotName(s)) : ''}</option>`).join('')}${mySlot ? '' : '<option selected disabled>bitte wählen</option>'}</select><span class="small muted" id="dlAt">aktualisiert ${new Date(L.at).toLocaleTimeString('de-DE')}</span></div>
   ${status}
   <div class="dl-grid">
     <div class="dl-main">
@@ -3109,9 +3085,9 @@ function matchStage(P, o = {}){
     <span class="ck-ball" style="left:${bx}%" title="${P.done ? lbl : 'Siegchance ' + lbl}"><i></i><b class="${win >= .5 ? 'good' : 'bad'}">${lbl}</b></span>
     <div class="ck-eyebrow ck-top">${esc(eb)}</div>
     <div class="ck-vs">
-      <div class="ck-side">${avatar(A.avatar, A.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.a}">${esc(A.name)}</span></div><div class="ck-sub">${o.ranks ? rk(TA) : esc(rec(TA)) + (o.place ? ' · Platz ' + o.place : '')}</div></div>
+      <div class="ck-side">${avatar(A.avatar, A.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.a}">${esc(A.name)}</span></div>${o.ranks ? '' : `<div class="ck-sub">${esc(rec(TA)) + (o.place ? ' · Platz ' + o.place : '')}</div>`}</div>
       <div class="ck-mid"><div class="ck-score"><span class="${sa >= sb ? 'lead' : ''}">${f1(sa)}</span><em>:</em><span class="${sb > sa ? 'lead' : ''}">${f1(sb)}</span></div><div class="ck-sub ck-got">${sub}</div></div>
-      <div class="ck-side r">${avatar(B.avatar, B.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.b}">${esc(B.name)}</span></div><div class="ck-sub">${o.ranks ? rk(TB) : esc(rec(TB)) + ' · ' + esc(B.manager)}</div></div>
+      <div class="ck-side r">${avatar(B.avatar, B.name, 'xl')}<div class="ck-tn"><span class="tlink" data-team="${P.b}">${esc(B.name)}</span></div>${o.ranks ? '' : `<div class="ck-sub">${esc(rec(TB)) + ' · ' + esc(B.manager)}</div>`}</div>
     </div></div>`;
 }
 /* Paarung als Fenster: Bühne und beide Aufstellungen Slot für Slot */
@@ -3144,9 +3120,9 @@ VIEWS.spieltag = () => {
   const strip = P => {
     const ta = C.team[P.a], tb = C.team[P.b];
     return `<div class="sp-strip">
-      <div><span class="l">Ø Punkte</span><span class="v">${ta ? f1(ta.avg) : '–'}</span></div>
+      <div><span class="l">${ta ? `<span>${ta.w}–${ta.l}${ta.t ? '–' + ta.t : ''}</span> · <span>Platz ${ta.place}</span> · <span>Power #${ta.prRank}</span>` : ''}</span><span class="v">Ø ${ta ? f1(ta.avg) : '–'}</span></div>
       <div class="c"><span class="l">${P.done ? 'Endstand' : 'Erwartete Punkte'}</span><span class="v">${f1(P.pa)} : ${f1(P.pb)}</span></div>
-      <div class="r"><span class="l">Ø Punkte</span><span class="v">${tb ? f1(tb.avg) : '–'}</span></div>
+      <div class="r"><span class="l">${tb ? `<span>${tb.w}–${tb.l}${tb.t ? '–' + tb.t : ''}</span> · <span>Platz ${tb.place}</span> · <span>Power #${tb.prRank}</span>` : ''}</span><span class="v">Ø ${tb ? f1(tb.avg) : '–'}</span></div>
     </div>`;
   };
   return `
