@@ -813,7 +813,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15b</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15c</span></footer>
 
 <script>
 "use strict";
@@ -2122,6 +2122,49 @@ function teamParts(rid){
 }
 const tcBox = x => x ? `<section class="tc-box"><h4>${esc(x.t)}</h4>${x.h}</section>` : '';
 const ckPanel = (x, help) => x ? `<section class="panel"><div class="panel-head"><h3>${esc(x.t)}</h3>${help ? qm(help) : ''}</div>${x.h}</section>` : '';
+/* ---------- Positionsrang in der laufenden Saison (Liga-Scoring) ---------- */
+function posRanks(){
+  if (S.C._prk) return S.C._prk;
+  const by = {};
+  for (const pid of Object.keys(S.players || {})){
+    const pos = normPos(pos1(pid)); if (!pos) continue;
+    const g = gamesPts(pid); if (!g.length) continue;
+    (by[pos] = by[pos] || []).push({pid, tot:sum(g), ppg:sum(g) / g.length, n:g.length});
+  }
+  const out = {};
+  for (const [pos, arr] of Object.entries(by)){
+    arr.sort((a,b) => b.tot - a.tot).forEach((x, i) => out[x.pid] = {pos, tot:i + 1, n:arr.length});
+    const minG = Math.max(2, Math.ceil(.5 * Math.max(...arr.map(x => x.n))));   // Ø-Rang nur mit genug Spielen
+    arr.filter(x => x.n >= minG).sort((a,b) => b.ppg - a.ppg).forEach((x, i) => out[x.pid].ppg = i + 1);
+  }
+  return S.C._prk = out;
+}
+/* ---------- Rolle im NFL-Team: wächst oder schrumpft sie? Letzte 3 Spiele gegen die Wochen davor ---------- */
+function roleTrend(pid){
+  const X = nxP(pid); if (!X) return null;
+  const pos = normPos(pos1(pid)); if (!['RB','WR','TE'].includes(pos)) return null;
+  const key = pos === 'RB' ? 'snap' : 'tgtSh', thr = pos === 'RB' ? .1 : .05;
+  const ws = X.w.filter(r => r[key] != null).sort((a,b) => a.week - b.week);
+  if (ws.length < 5) return null;
+  const a = avg(ws.slice(0, -3).map(r => r[key])), b = avg(ws.slice(-3).map(r => r[key])), d = b - a;
+  if (Math.abs(d) < thr) return null;
+  const lbl = key === 'snap' ? 'Snap-Anteil' : 'Target Share';
+  return {up: d > 0, d, key, from:a, to:b, text:`${lbl} zuletzt ${pctFmt(b)} statt ${pctFmt(a)}`};
+}
+function trendChip(pid){
+  const t = roleTrend(pid); if (!t) return '';
+  return ` <span class="chip ${t.up ? 'good' : 'bad'} mchip" title="${esc(t.text + ' (letzte 3 Spiele gegen die Wochen davor)')}">Rolle ${t.up ? '↑' : '↓'}</span>`;
+}
+const nflHints = (pid, w) => mChip(pid, w) + trendChip(pid);
+/* Zweite Meinung bei knappen Entscheidungen: Matchup und Rolle, je +1 / −1 */
+function tieScore(pid, w){
+  const m = matchup(pid, w), t = roleTrend(pid), why = [];
+  let v = 0;
+  if (m && !m.bye && m.tone !== 'plain'){ v += m.tone === 'good' ? 1 : -1; why.push(`${m.label}es Matchup ${m.home ? 'gegen' : 'bei'} ${m.opp}`); }
+  if (t){ v += t.up ? 1 : -1; why.push(t.up ? 'wachsende Rolle' : 'schrumpfende Rolle'); }
+  return {v, why};
+}
+
 /* ---------- Gegner-Check: wie stark ist die Defense, gegen die ein Spieler antritt? ---------- */
 /* Rang 1 = Defense, die gegen diese Position am wenigsten zulässt (gegnerbereinigt). Gerechnet im Liga-Scoring: Standardpunkte plus Punkte pro Fang. */
 function matchup(pid, w){
@@ -2139,6 +2182,7 @@ function matchup(pid, w){
 function mChip(pid, w){
   const m = matchup(pid, w); if (!m) return '';
   if (m.bye) return ' <span class="chip plain mchip">Bye</span>';
+  if (m.tone === 'plain') return '';   // durchschnittliches Matchup: kein Hinweis nötig
   return ` <span class="chip ${m.tone} mchip" title="${esc(`${m.home ? 'gegen' : 'bei'} ${m.opp}: Diese Defense lässt ${m.pos}s im Schnitt ${f1(m.allowed)} Punkte pro Spiel zu, ${sgn(m.adj)} gegenüber dem, was ihre Gegner sonst erzielen. Rang ${m.rank} von 32, 1 ist die schwerste Defense.`)}">${m.home ? 'vs' : '@'} ${esc(m.opp)} · ${m.label}</span>`;
 }
 const nowWeek = () => S.isLive ? S.currentWeek : ((S.completed || []).slice(-1)[0] || 1);
@@ -2228,6 +2272,8 @@ function playerCardHtml(pid){
   const g = gamesPts(pid), ppg = g.length ? sum(g) / g.length : null;
   const m = X ? X.s : null, pc = X && X.pc || {};
   const kp = [];
+  const prk = posRanks()[pid];
+  if (prk) kp.push(kpi(`${prk.pos}${prk.tot}`, 'Positionsrang', `nach Gesamtpunkten${prk.ppg ? ` · nach Ø ${prk.pos}${prk.ppg}` : ''}`));
   kp.push(kpi(ppg != null ? f1(ppg) : '–', 'Fantasy-Punkte', ppg != null ? `Ø pro Spiel · ${g.length} ${g.length === 1 ? 'Spiel' : 'Spiele'}` : 'noch kein Einsatz'));
   if (m){
     const add = (k, lbl, fmt, sub) => { if (m[k] != null) kp.push(kpi(fmt(m[k]), lbl, sub || (pc[k] != null ? `besser als ${pc[k]} % der ${pos}s` : ''))); };
@@ -2250,7 +2296,7 @@ function playerCardHtml(pid){
   <div class="tc-head pc-head">${fieldStage()}<button class="tc-close" data-tclose aria-label="Schließen">×</button>
     <div class="tc-id"><div class="pc-badge ${esc(pos)}">${esc(pos || '?')}</div><div style="min-width:0"><div class="tc-name">${esc(pname(pid))}</div>
       <div class="tc-sub">${esc(tm || 'ohne Team')}${bw ? ' · Bye Woche ' + bw : ''}${p.age ? ' · ' + p.age + ' Jahre' : ''}</div>
-      <div class="tc-chips">${injChip(pid)}${owner ? `<span class="chip plain">bei <span class="tlink" data-team="${owner.roster_id}">${esc(S.teamByRid[owner.roster_id].name)}</span></span>` : '<span class="chip good">Free Agent</span>'}${(X && X.ty || []).map(t => `<span class="chip pc-type">${esc(t)}</span>`).join('')}</div></div></div>
+      <div class="tc-chips">${injChip(pid)}${owner ? `<span class="chip plain">bei <span class="tlink" data-team="${owner.roster_id}">${esc(S.teamByRid[owner.roster_id].name)}</span></span>` : '<span class="chip good">Free Agent</span>'}${(X && X.ty || []).map(t => `<span class="chip pc-type">${esc(t)}</span>`).join('')}${(() => { const t = roleTrend(pid); return t ? `<span class="chip ${t.up ? 'good' : 'bad'}">${esc(t.text)}</span>` : ''; })()}</div></div></div>
   </div>
   <div class="kpis tc-kpis">${kp.join('')}</div>
   <div class="tc-grid">
@@ -2658,6 +2704,12 @@ VIEWS.cockpit = () => {
     st.forEach(pid => { const inj = S.players[pid] && S.players[pid].inj; if (inj && ['Out','IR','PUP','Sus','Doubtful'].includes(inj)) alerts.push({sev:'bad', t:`${pname(pid)} ist ${inj} und steht in der Startelf`, sub:'Jetzt ersetzen', go:'lineup'}); else if (inj) alerts.push({sev:'warn', t:`${pname(pid)} ist ${inj}`, sub:'Status vor dem Kickoff prüfen', go:'lineup'}); });
     st.filter(pid => isBye(pid)).forEach(pid => alerts.push({sev:'bad', t:`${pname(pid)} hat spielfrei`, sub:`Bye in Woche ${w}, steht aber in der Startelf`, go:'lineup'}));
     L.starters.forEach((x,i) => { if (!x || x === '0') alerts.push({sev:'bad', t:`Slot ${slotLabel(S.slots[i])} ist leer`, sub:'Jeder leere Platz kostet Punkte', go:'lineup'}); });
+    if (S.nx){
+      const down = st.filter(pid => { const t = roleTrend(pid); return t && !t.up; });
+      if (down.length) alerts.push({sev:'info', t:`Rolle schrumpft: ${down.map(pname).join(', ')}`, sub: roleTrend(down[0]).text + (down.length > 1 ? ' und weitere' : ''), go:'lineup'});
+      const up = (L.bench || []).filter(pid => { const t = roleTrend(pid); return t && t.up; });
+      if (up.length) alerts.push({sev:'info', t:`Rolle wächst: ${up.map(pname).join(', ')}`, sub:'auf deiner Bank · ' + roleTrend(up[0]).text, go:'lineup'});
+    }
     if (L.gain > .5) alerts.push({sev:'warn', t:`${f1(L.gain)} Punkte mehr möglich`, sub:`${L.ins.length} ${L.ins.length === 1 ? 'Wechsel' : 'Wechsel'} in der Startelf empfohlen`, go:'lineup'});
     try {
       const rr = t.roster, hidden = new Set(rr.reserve || []), ids = rosterIds(me).filter(x => !hidden.has(x)), base = teamValue(ids).opt;
@@ -2796,7 +2848,18 @@ VIEWS.lineup = () => {
   const C = S.C, rid = S.myRid, r = S.teamByRid[rid].roster;
   let out = head('Startelf-Check', S.isLive ? `Woche ${S.currentWeek} · Erwartung aus ${S.projOK ? 'Projektion, Form und Saisonschnitt' : 'Form und Saisonschnitt (Projektionen nicht erreichbar)'}, ohne Bye- und Verletzungswochen` : 'Rückblick auf die Saison');
   if (S.isLive){
-    const {starters, bench, val, opt, curTot, gain, livePts, anyLive, ins, warns, reason, pairs} = lineupData();
+    const {starters, bench, val, opt, curTot, gain, livePts, anyLive, ins, outs, warns, reason, pairs} = lineupData();
+    /* Knappe Entscheidungen: Bankspieler liegt höchstens 2 Punkte hinter einem Starter. Die Sleeper-Erwartung bleibt maßgeblich,
+       Matchup und Rolle sind nur die zweite Meinung, wenn es fast gleich steht. */
+    const close = [], used = new Set([...ins, ...outs]);
+    if (S.nx) starters.forEach((sp, i) => {
+      if (!sp || sp === '0' || used.has(sp) || gameStarted(sp, S.currentWeek)) return;
+      const alt = bench.filter(b => !used.has(b) && canPlay(b, S.slots[i]) && !isBye(b) && !gameStarted(b, S.currentWeek) && val(sp) - val(b) >= 0 && val(sp) - val(b) < 2).sort((a,b) => val(b) - val(a))[0];
+      if (!alt) return;
+      const ts = tieScore(sp, S.currentWeek), tb = tieScore(alt, S.currentWeek);
+      if (tb.v - ts.v < 2) return;
+      used.add(alt); close.push({sp, alt, d:val(sp) - val(alt), ts, tb, slot:S.slots[i]});
+    });
     out += `
     <div class="kpis">
       ${kpi(f1(curTot), 'Aktuelle Aufstellung', 'erwartete Punkte')}
@@ -2806,16 +2869,21 @@ VIEWS.lineup = () => {
     ${warns.length ? `<div class="note"><b>Achtung:</b> ${warns.map(esc).join(' ')}</div>` : ''}
     ${ins.length ? `<section class="panel"><div class="panel-head"><h3>Empfohlene Wechsel</h3>${qm(`Rein von der Bank, raus aus der Startelf. Bewertet wird die Erwartung: Sleeper-Projektion (50 %) gemischt mit Form (letzte 3 Einsätze) und Saisonschnitt. Bye und Verletzung zählen nicht als Nullwochen. Die Slots ordnet Sleeper beim Speichern selbst.`)}</div>
       <div class="swap-list">${pairs.map(({pin, pout}) => { return `
-        <div class="swap"><div><div class="in">Rein: ${esc(pname(pin))}</div><div class="pmeta">${posChip(pos1(pin))} ${esc(nflTeam(pin))} · ${esc(reason(pin))}</div></div>
+        <div class="swap"><div><div class="in">Rein: ${esc(pname(pin))}</div><div class="pmeta">${posChip(pos1(pin))} ${esc(nflTeam(pin))} · ${esc(reason(pin))}${nflHints(pin, S.currentWeek)}</div></div>
         <div class="arrow">⇄</div>
-        <div>${pout ? `<div class="out">Raus: ${esc(pname(pout))}</div><div class="pmeta">${posChip(pos1(pout))} ${esc(nflTeam(pout))} · ${esc(reason(pout))}</div>` : '<div class="muted">freier Slot</div>'}</div></div>`; }).join('')}</div></section>` : ''}
+        <div>${pout ? `<div class="out">Raus: ${esc(pname(pout))}</div><div class="pmeta">${posChip(pos1(pout))} ${esc(nflTeam(pout))} · ${esc(reason(pout))}${nflHints(pout, S.currentWeek)}</div>` : '<div class="muted">freier Slot</div>'}</div></div>`; }).join('')}</div></section>` : ''}
+    ${close.length ? `<section class="panel"><div class="panel-head"><h3>Knappe Entscheidungen</h3>${qm(`Hier liegt ein Bankspieler höchstens 2 Punkte hinter einem Starter. Maßgeblich bleibt die Erwartung aus Sleeper-Projektion, Form und Saisonschnitt, sie spricht knapp für den Starter. Bei so wenig Abstand lohnt aber der zweite Blick: Matchup (wie viel lässt die gegnerische Defense der Position zu, gegnerbereinigt) und Rolle (wächst sein Anteil an Targets oder Snaps in den letzten 3 Spielen?). Gezeigt wird ein Fall nur, wenn beides klar für den Bankspieler spricht.`)}</div>
+      <div class="swap-list">${close.map(c => `<div class="swap"><div><div class="in">Erwägen: ${esc(pname(c.alt))}</div><div class="pmeta">${posChip(pos1(c.alt))} ${esc(nflTeam(c.alt))} · Erw. ${f1(val(c.alt))}${nflHints(c.alt, S.currentWeek)}</div><div class="pmeta">${esc(c.tb.why.join(', '))}</div></div>
+        <div class="arrow">⇄</div>
+        <div><div class="out">statt ${esc(pname(c.sp))}</div><div class="pmeta">${posChip(pos1(c.sp))} ${esc(nflTeam(c.sp))} · Erw. ${f1(val(c.sp))}, ${f1(c.d)} mehr${nflHints(c.sp, S.currentWeek)}</div>${c.ts.why.length ? `<div class="pmeta">${esc(c.ts.why.join(', '))}</div>` : ''}</div></div>`).join('')}</div>
+      <p class="small muted">Die Sleeper-Erwartung spricht knapp für den Starter. Wer auf Nummer sicher geht, lässt ihn drin.</p></section>` : ''}
     <section class="panel"><div class="panel-head"><h3>Deine Startelf diese Woche</h3></div>
       <div class="tbl-wrap"><table><thead><tr><th>Slot</th><th>Spieler</th><th class="n">Erwartung</th>${S.projOK ? '<th class="n">Proj.</th>' : ''}<th class="n">Ø 3 W.</th>${anyLive ? '<th class="n">Live</th>' : ''}<th>Status</th></tr></thead><tbody>
-      ${starters.map((p,i) => `<tr><td><span class="slot">${esc(slotLabel(S.slots[i]))}</span></td><td>${p && p !== '0' ? playerCell(p, mChip(p, S.currentWeek)) : '<span class="muted">leer</span>'}</td><td class="n" style="font-weight:700">${p && p !== '0' ? f1(val(p)) : '–'}</td>${S.projOK ? `<td class="n">${p && S.proj[p] != null ? f1(S.proj[p]) : '–'}</td>` : ''}<td class="n">${f1(lastN(p))}</td>${anyLive ? `<td class="n">${f1(livePts[p])}</td>` : ''}<td>${p && p !== '0' && !opt.set.has(p) ? '<span class="chip bad">raus</span>' : p && p !== '0' ? '<span class="chip good">passt</span>' : ''}</td></tr>`).join('')}
+      ${starters.map((p,i) => `<tr><td><span class="slot">${esc(slotLabel(S.slots[i]))}</span></td><td>${p && p !== '0' ? playerCell(p, nflHints(p, S.currentWeek)) : '<span class="muted">leer</span>'}</td><td class="n" style="font-weight:700">${p && p !== '0' ? f1(val(p)) : '–'}</td>${S.projOK ? `<td class="n">${p && S.proj[p] != null ? f1(S.proj[p]) : '–'}</td>` : ''}<td class="n">${f1(lastN(p))}</td>${anyLive ? `<td class="n">${f1(livePts[p])}</td>` : ''}<td>${p && p !== '0' && !opt.set.has(p) ? '<span class="chip bad">raus</span>' : p && p !== '0' ? '<span class="chip good">passt</span>' : ''}</td></tr>`).join('')}
       </tbody></table></div>
       <h3 style="margin-top:6px">Bank</h3>
       <div class="tbl-wrap"><table><thead><tr><th>Spieler</th><th class="n">Erwartung</th>${S.projOK ? '<th class="n">Proj.</th>' : ''}<th class="n">Ø 3 W.</th>${anyLive ? '<th class="n">Live</th>' : ''}<th></th></tr></thead><tbody>
-      ${bench.sort((a,b) => val(b) - val(a)).map(p => `<tr><td>${playerCell(p, mChip(p, S.currentWeek))}</td><td class="n" style="font-weight:700">${f1(val(p))}</td>${S.projOK ? `<td class="n">${S.proj[p] != null ? f1(S.proj[p]) : '–'}</td>` : ''}<td class="n">${f1(lastN(p))}</td>${anyLive ? `<td class="n">${f1(livePts[p])}</td>` : ''}<td>${opt.set.has(p) ? '<span class="chip good">rein</span>' : ''}</td></tr>`).join('')}
+      ${bench.sort((a,b) => val(b) - val(a)).map(p => `<tr><td>${playerCell(p, nflHints(p, S.currentWeek))}</td><td class="n" style="font-weight:700">${f1(val(p))}</td>${S.projOK ? `<td class="n">${S.proj[p] != null ? f1(S.proj[p]) : '–'}</td>` : ''}<td class="n">${f1(lastN(p))}</td>${anyLive ? `<td class="n">${f1(livePts[p])}</td>` : ''}<td>${opt.set.has(p) ? '<span class="chip good">rein</span>' : ''}</td></tr>`).join('')}
       </tbody></table></div>
     </section>`;
   } else {
@@ -2892,7 +2960,7 @@ VIEWS.adds = () => {
   ${useProj ? '' : `<div class="note">Die Sleeper-Projektionen sind gerade nicht erreichbar. Die Empfehlung basiert nur auf den Ist-Punkten der letzten Wochen${S.trending.length ? ' und den Trending Adds' : ''}.</div>`}
   <section class="panel"><div class="panel-head"><h3>Verbesserungen für dein Team</h3>${qm(`Nur Free Agents, die deine erwarteten Punkte pro Woche spürbar erhöhen (mindestens +0,15 Pkt.): Berechnet wird die beste Aufstellung inklusive FLEX und Superflex plus Bankwert, jeweils mit dem sinnvollsten Drop. Der übliche Kader (z. B. ein Ersatz-QB) bleibt dabei erhalten.`)}</div>
     ${topBetter.length ? topBetter.map(({a, adv}, i) => `<div class="add-card">
-      <div style="display:flex;gap:10px;align-items:flex-start;min-width:0"><span class="rank">${i+1}</span>${playerCell(a.pid, mChip(a.pid, S.projWeek))}</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;min-width:0"><span class="rank">${i+1}</span>${playerCell(a.pid, nflHints(a.pid, S.projWeek))}</div>
       <div class="score" style="${tintF(Math.min(1, .5 + adv.gain / 8))}" title="Gewinn für dein Team in erwarteten Punkten pro Woche">+${f1(adv.gain)}<small>Pkt./Woche</small></div>
       <div class="parts"><span>Erwartung <b>${f1(expVal(a.pid))}</b> Pkt./Woche</span>${isBye(a.pid) ? '<span>diese Woche Bye</span>' : useProj ? `<span>Proj. W${S.projWeek}: <b>${f1(a.proj)}</b></span>` : ''}<span>Ø 3 Wochen: <b>${f1(a.recent)}</b>${a.n < 3 ? ` <span class="muted">(nur ${a.n} Einsatz${a.n === 1 ? '' : 'e'}, wird vorsichtiger bewertet)</span>` : ''}</span></div>
       ${(() => { const r = addRole(a.pid, adv.pid); const b = byeNote(a.pid, adv.pid); return `<div class="hintline">${roleChip(r)} ${esc(r.text)}</div>${b ? `<div class="hintline ${b.warn ? 'byewarn' : ''}"><span class="chip ${b.warn ? 'warn' : 'plain'}">Bye</span> ${esc(b.text)}</div>` : ''}`; })()}
@@ -2903,7 +2971,7 @@ VIEWS.adds = () => {
     <div class="filters">${['ALL', ...S.leaguePos].map(p => `<button class="seg" data-apos="${p}" aria-pressed="${f === p}">${p === 'ALL' ? 'Alle' : p}${weakPos.includes(p) ? ' <span class="need-dot" title="Bedarf: Diese Position ist bei dir im schwächsten Drittel der Liga"></span>' : ''}</button>`).join('')}</div>${weakPos.length ? `<p class="small muted" style="margin:8px 0 0"><span class="need-dot"></span> Bedarf: Position im schwächsten Drittel der Liga (Aufstellung und Kadertiefe zusammen)</p>` : ''}
     ${shown.length ? `<div>${shown.map((a,i) => `
       <div class="add-card">
-        <div style="display:flex;gap:10px;align-items:flex-start;min-width:0"><span class="rank">${i+1}</span>${playerCell(a.pid, mChip(a.pid, S.projWeek))}</div>
+        <div style="display:flex;gap:10px;align-items:flex-start;min-width:0"><span class="rank">${i+1}</span>${playerCell(a.pid, nflHints(a.pid, S.projWeek))}</div>
         <div class="score" title="Helper-Score: von Sleeper Helper berechnet">${f1(a.score)}<small>Helper-Score</small></div>
         <div class="parts">${useProj ? `<span>Proj. W${S.projWeek}: <b>${f1(a.proj)}</b></span>` : ''}<span>Ø 3 Wochen: <b>${f1(a.recent)}</b>${a.n < 3 ? ` <span class="muted">(nur ${a.n} Einsatz${a.n === 1 ? '' : 'e'}, wird vorsichtiger bewertet)</span>` : ''}</span><span>Trending: <b>${a.tc ? f0(a.tc) + ' Adds' : '–'}</b></span>${a.injF < 1 ? `<span>Verletzungsfaktor ×${String(a.injF).replace('.',',')}</span>` : ''}</div>
         ${(() => { const r = addRole(a.pid, null); const b = byeNote(a.pid, null); return `<div class="hintline">${roleChip(r)} ${esc(r.text)}</div>${b ? `<div class="hintline ${b.warn ? 'byewarn' : ''}"><span class="chip ${b.warn ? 'warn' : 'plain'}">Bye</span> ${esc(b.text)}</div>` : ''}`; })()}
