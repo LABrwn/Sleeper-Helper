@@ -885,7 +885,7 @@ body.locked{overflow:hidden}
 </head>
 <body>
 <div id="app"></div>
-<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-15h</span></footer>
+<footer class="foot gutter">Daten live von der öffentlichen Sleeper-API. Projektionen und Wochen-Stats stammen von inoffiziellen Sleeper-Endpunkten und können ausfallen. NFL-Detaildaten: <a href="https://github.com/nflverse/nflverse-data">nflverse</a> (CC BY 4.0). <span class="muted">· Version 2026-11-22</span></footer>
 
 <script>
 "use strict";
@@ -1395,15 +1395,26 @@ function rosterWeek(rid, w){
 }
 const optWeek = (rid, w) => { const c = S._optW || (S._optW = {}), k = rid + ':' + w; if (k in c) return c[k]; const r = rosterWeek(rid, w); return c[k] = r ? optimalLineup(r.list).total : null; };
 /* Punkte, die ein Move der bestmöglichen Aufstellung gebracht hat: Kader wie er war gegen Kader ohne die Zugänge und mit den Abgängen */
+/* Punkte des Gegners in dieser Woche (tatsächlich erzielt) */
+function oppPts(rid, w){
+  const ms = S.matchups[w] || [], m = ms.find(x => x.roster_id === rid);
+  if (!m || m.matchup_id == null) return null;
+  const o = ms.find(x => x.matchup_id === m.matchup_id && x.roster_id !== rid);
+  return o && o.points != null ? o.points : null;
+}
 function moveEffect(rid, inIds, outIds, from){
   let delta = 0, weeks = 0;
+  const won = [], lost = [];   /* Wochen, deren Ausgang der Move gedreht hat: beste Aufstellung mit gegen ohne, jeweils gegen die echten Punkte des Gegners */
   for (const w of S.completed || []){
     if (w < from) continue;
     const r = rosterWeek(rid, w), A = optWeek(rid, w); if (!r || A == null) continue;
     const alt = r.list.filter(x => !inIds.includes(x.pid)).concat(outIds.filter(x => !r.ids.has(x)).map(pid => ({pid, pts: weekPts(pid, w) ?? 0})));
-    delta += A - optimalLineup(alt).total; weeks++;
+    const B = optimalLineup(alt).total;
+    delta += A - B; weeks++;
+    const op = oppPts(rid, w);
+    if (op != null){ if (A > op && B <= op) won.push(w); else if (A <= op && B > op) lost.push(w); }
   }
-  return {delta, weeks, per: weeks ? delta / weeks : 0};
+  return {delta, weeks, per: weeks ? delta / weeks : 0, won, lost};
 }
 
 /* ---------- Transaktionen eines Managers ---------- */
@@ -1424,7 +1435,7 @@ function txData(rid){
       const pk = t.draft_picks || [];
       const net = sum(recv.map(x => x.pts)) - sum(sent.map(x => x.pts));
       const ef = moveEffect(rid, mineAdd, mineDrop, from);
-      trades.push({w:L, from, partner:(t.roster_ids || []).find(x => x !== rid), recv, sent, net, eff:ef.delta, effW:ef.weeks, effPer:ef.per,
+      trades.push({w:L, from, partner:(t.roster_ids || []).find(x => x !== rid), recv, sent, net, eff:ef.delta, effW:ef.weeks, effPer:ef.per, won:ef.won, lost:ef.lost,
         verdict: from > lastW ? 'neu' : ef.per > .75 ? 'good' : ef.per < -.75 ? 'bad' : 'plain',
         picksIn: pk.filter(x => x.owner_id === rid && x.previous_owner_id !== rid), picksOut: pk.filter(x => x.previous_owner_id === rid && x.owner_id !== rid)});
     } else if (t.type === 'waiver' || t.type === 'free_agent'){
@@ -1442,7 +1453,8 @@ function txData(rid){
     }
   }
   const sm = {nAdds:adds.length, nWaiver:adds.filter(a => a.type === 'waiver').length, started:sum(adds.map(a => a.st.t)), bids:sum(adds.map(a => a.bid || 0)),
-    nTrades:trades.length, net:sum(trades.map(x => x.net)), effAdds:sum(adds.map(a => a.eff)), effTrades:sum(trades.map(x => x.eff))};
+    nTrades:trades.length, net:sum(trades.map(x => x.net)), effAdds:sum(adds.map(a => a.eff)), effTrades:sum(trades.map(x => x.eff)),
+    tWon:sum(trades.map(x => x.won.length)), tLost:sum(trades.map(x => x.lost.length))};
   return {adds, trades, drops, sum:sm};
 }
 function txOf(rid){ const c = S._tx || (S._tx = {}); return c[rid] || (c[rid] = txData(rid)); }
@@ -4296,6 +4308,7 @@ VIEWS.transactions = () => {
     ${S.cfg.faab != null ? kpi(`${f0(sm.bids)} $`, 'FAAB eingesetzt', `von ${S.cfg.faab} $ Budget`) : kpi(best ? pname(best.pid) : '–', 'Bester Add', best ? `${sgn(best.eff)} Pkt. für die Startelf` : 'noch keiner')}
     ${kpi(String(sm.nTrades), 'Trades', sm.nTrades ? 'abgeschlossen' : 'keine')}
     ${kpi(sm.nTrades ? sgn(sm.effTrades) : '–', 'Trade-Bilanz', `Startelf-Effekt · roh ${sm.nTrades ? sgn(sm.net) : '–'} Pkt.`, numTone(sm.effTrades), anyTrade && sm.nTrades ? rk('effTrades') : null)}
+    ${kpi(sm.nTrades ? (sm.tWon - sm.tLost > 0 ? '+' : sm.tWon - sm.tLost < 0 ? '−' : '±') + Math.abs(sm.tWon - sm.tLost) : '–', 'Siege durch Trades', sm.nTrades ? `${sm.tWon} ${sm.tWon === 1 ? 'Spiel' : 'Spiele'} dadurch gewonnen · ${sm.tLost} verloren` : 'keine Trades', sm.tWon > sm.tLost ? 'good' : sm.tWon < sm.tLost ? 'bad' : '')}
   </div>
   <section class="panel"><div class="panel-head"><h3>Kaderverlauf</h3><div class="filters"><button class="seg" id="txFull" aria-pressed="${full}">Ganzer Kader</button></div>${qm(`Eine Zeile je Spieler, ein Feld je Woche: kräftig gefüllt stand er in der Startelf, blass saß er auf der Bank, leer war er nicht im Kader. Unter dem Namen steht, wann und wie er kam (▲) und ging (▼). Ohne „Ganzer Kader“ siehst du nur Spieler, die während der Saison gekommen oder gegangen sind. Defenses und Kicker laufen unten als eine Spur, weil sie oft wöchentlich wechseln.`)}</div>
     ${gantt}</section>
@@ -4303,10 +4316,10 @@ VIEWS.transactions = () => {
     ${coreShown.length ? byWeek(coreShown) : `<div class="empty">${core.length ? 'Kein Zugang passt zu diesem Filter.' : 'Keine Waiver- oder Free-Agent-Zugänge auf den Feldpositionen.'}</div>`}
     ${stream.length ? `<details class="tx-stream"><summary><span><b>Streaming: Defenses und Kicker</b><span class="pmeta">${stream.length} ${stream.length === 1 ? 'Wechsel' : 'Wechsel'} · aufklappen</span></span><span class="tx-v ${numTone(sum(stream.map(a => a.eff)))}">${sgn(sum(stream.map(a => a.eff)))}</span></summary><p class="small muted">Unterm Strich haben die Wechsel auf diesen Positionen deiner besten Aufstellung ${sgn(sum(stream.map(a => a.eff)))} Punkte gebracht, verglichen mit dem Behalten der jeweils gedroppten Spieler.</p>${byWeek(stream)}</details>` : ''}
   </section>
-  <section class="panel"><div class="panel-head"><h3>Trades</h3>${qm(`<b>Startelf-Effekt</b>: Für jede Woche seit dem Trade wird die bestmögliche Aufstellung mit dem neuen Kader gegen die bestmögliche Aufstellung mit dem alten Kader gerechnet. Ein abgegebener QB mit 17 Punkten kostet dich nichts, wenn dein eigener QB 20 Punkte macht. <b>Rohbilanz</b> daneben: Punkte der erhaltenen minus der abgegebenen Spieler, egal ob sie in der Aufstellung gestanden hätten. Draft Picks werden nicht bewertet. Trades nach dem Spieltag zählen ab der folgenden Woche.`)}</div>
+  <section class="panel"><div class="panel-head"><h3>Trades</h3>${qm(`<b>Startelf-Effekt</b>: Für jede Woche seit dem Trade wird die bestmögliche Aufstellung mit dem neuen Kader gegen die bestmögliche Aufstellung mit dem alten Kader gerechnet. Ein abgegebener QB mit 17 Punkten kostet dich nichts, wenn dein eigener QB 20 Punkte macht. <b>Rohbilanz</b> daneben: Punkte der erhaltenen minus der abgegebenen Spieler, egal ob sie in der Aufstellung gestanden hätten. <b>Spiele</b>: In wie vielen Wochen hat der Trade den Ausgang gedreht? Dafür tritt die beste Aufstellung mit Trade und die beste ohne Trade jeweils gegen die tatsächlichen Punkte des Gegners an. Gewinnt nur die Aufstellung mit Trade, hat er dir die Woche gewonnen (▲), gewinnt nur die ohne, hat er sie gekostet (▼). Draft Picks werden nicht bewertet. Trades nach dem Spieltag zählen ab der folgenden Woche.`)}</div>
     ${D.trades.length ? D.trades.map(x => `<div class="trade"><div class="tr-head"><div><b>Woche ${x.w} · mit ${esc(S.teamByRid[x.partner]?.name || 'unbekannt')}</b>${x.from > x.w ? `<div class="pmeta">Nach dem Spieltag umgesetzt, gewertet ab Woche ${x.from}</div>` : ''}</div>${x.verdict === 'neu' ? '<span class="chip plain">zu neu für eine Bewertung</span>' : `<span class="chip ${x.verdict}">${x.verdict === 'good' ? 'Gewinn' : x.verdict === 'bad' ? 'Verlust' : 'ausgeglichen'} ${sgn(x.eff)} Pkt.</span>`}</div>
       <div class="tr-sides"><div class="tr-side"><span class="tag">Erhalten</span>${x.recv.map(r => `<div class="tp"><div>${playerCell(r.pid)}</div>${tpv(r, 'kein Einsatz')}</div>`).join('')}${picks(x.picksIn)}</div><div class="tr-arrow" aria-hidden="true">⇄</div><div class="tr-side"><span class="tag">Abgegeben</span>${x.sent.map(r => `<div class="tp"><div>${playerCell(r.pid)}</div>${tpv(r, 'kein Einsatz')}</div>`).join('')}${picks(x.picksOut)}</div></div>
-      ${x.verdict === 'neu' ? `<div class="tr-metrics"><span>Gewertet ab Woche ${x.from}, bisher keine gespielte Woche</span></div>` : `<div class="tr-metrics"><span>Startelf-Effekt <b class="${numTone(x.eff)}">${sgn(x.eff)}</b> Pkt.</span><span>${esc(perTxt(x))}</span><span>Rohbilanz <b class="${numTone(x.net)}">${sgn(x.net)}</b> Pkt.</span></div>`}</div>`).join('') : `<div class="empty">Keine Trades in dieser Saison.</div>`}</section>
+      ${x.verdict === 'neu' ? `<div class="tr-metrics"><span>Gewertet ab Woche ${x.from}, bisher keine gespielte Woche</span></div>` : `<div class="tr-metrics"><span>Startelf-Effekt <b class="${numTone(x.eff)}">${sgn(x.eff)}</b> Pkt.</span><span>${esc(perTxt(x))}</span><span>Rohbilanz <b class="${numTone(x.net)}">${sgn(x.net)}</b> Pkt.</span><span>Spiele <b class="${x.won.length > x.lost.length ? 'good' : x.won.length < x.lost.length ? 'bad' : ''}">${x.won.length} gewonnen · ${x.lost.length} verloren</b>${x.won.length || x.lost.length ? ` <span class="muted">(${[...x.won.map(w => 'W' + w + ' ▲'), ...x.lost.map(w => 'W' + w + ' ▼')].sort((a,b) => parseInt(a.slice(1)) - parseInt(b.slice(1))).join(', ')})</span>` : ''}</span></div>`}</div>`).join('') : `<div class="empty">Keine Trades in dieser Saison.</div>`}</section>
   ${drops.length ? `<section class="panel"><div class="panel-head"><h3>Ersatzlos gedroppt</h3>${qm(`Spieler, die ohne direkten Ersatz gingen. <b>Hätte gebracht</b>: Punkte, die der Spieler deiner bestmöglichen Aufstellung seit dem Drop zusätzlich gebracht hätte, als reines Was-wäre-wenn.`)}</div>
     <div class="tbl-wrap"><table><thead><tr><th>Woche</th><th>Spieler</th><th class="n">Punkte seither</th><th class="n">Hätte gebracht</th></tr></thead><tbody>${drops.map(d => `<tr><td>W${d.w}</td><td>${playerCell(d.pid)}</td><td class="n">${f1(d.after)}<div class="pmeta">${esc(avgTxt(d.after, d.g))}</div></td><td class="n" style="font-weight:700"><span class="${d.cost > .5 ? 'bad' : 'muted'}">${f1(Math.max(0, d.cost))}</span></td></tr>`).join('')}</tbody></table></div></section>` : ''}`;
 };
